@@ -25,13 +25,15 @@
 
 @property (nonatomic) CVDisplayLinkRef displayLink;     // display link for managing rendering thread
 @property (nonatomic) int64_t lastTicks;
-@property (nonatomic) float rotationAngle;
 @property (nonatomic) BOOL isLightOn;
+@property (nonatomic) BOOL isWorldRotating;
 
 @property (nonatomic) GLfloat rotateY;                  // rotation around Y-axis (looking left and right: our heading)
 @property (nonatomic) GLfloat rotateX;                  // rotation around X-axis
 @property (nonatomic) GLfloat translateX;               // translation on X-axis (movement through space)
 @property (nonatomic) GLfloat translateZ;               // translation on Z-axis (movement through space)
+@property (nonatomic) GLfloat worldRotateY;
+@property (nonatomic) GLfloat worldRotateX;
 @property (nonatomic) NSPoint trackingMousePosition;
 
 @end
@@ -45,14 +47,18 @@
     NSLog(@"awakeFromNib");
     
     _lastTicks = 0;
-    _rotationAngle = 0.0f;
     _isLightOn = NO;
+    _isWorldRotating = NO;
     
     // "Camera" movement is done by rotating and translating modelview in opposite angle / direction
     _rotateY = 0;
     _rotateX = 0;
     _translateX = 0;
     _translateZ = 0;
+    
+    // "World" movement (spin world around origin)
+    _worldRotateX = 0;
+    _worldRotateY = 0;
     
     [self becomeFirstResponder];
 }
@@ -122,11 +128,13 @@
 
 - (void)keyDown:(NSEvent *)theEvent
 {
-    NSLog(@"key: %@", [theEvent characters]);
-    
     if ([[theEvent characters] isEqualToString:@"l"])
     {
         _isLightOn = ! _isLightOn;
+    }
+    else if ([[theEvent characters] isEqualToString:@"w"])
+    {
+        _isWorldRotating = ! _isWorldRotating;
     }
     else if ([theEvent modifierFlags] & NSNumericPadKeyMask)
     {
@@ -166,24 +174,32 @@
 
 - (IBAction)moveLeft:(id)sender
 {
-    //
-    // Rotate heading / view counter-clockwise (left)
-    //
-    _rotateY += 0.5f;   // CCW in degrees
+    if (_isWorldRotating)
+    {
+        _worldRotateY += 0.5f;
+    }
+    else
+    {
+        // Rotate heading / view counter-clockwise (left)
+        _rotateY += 0.5f;   // CCW in degrees
+    }
 }
 
 - (IBAction)moveRight:(id)sender
 {
-    //
-    // Rotate heading / view counter-clockwise (right)
-    //
-    _rotateY -= 0.5f;   // CW in degrees
+    if (_isWorldRotating)
+    {
+        _worldRotateY -= 0.5f;
+    }
+    else
+    {
+        // Rotate heading / view counter-clockwise (right)
+        _rotateY -= 0.5f;   // CW in degrees
+    }
 }
 
 - (void)mouseDown:(NSEvent *)theEvent
 {
-//  NSLog(@"mouseDown");
-    
     _trackingMousePosition = [self convertPoint:[theEvent locationInWindow] fromView:nil];
 }
 
@@ -191,18 +207,20 @@
 {
     NSPoint locationInView = [self convertPoint:[theEvent locationInWindow] fromView:nil];
     
-    //
     // Cocoa View puts (0,0) at bottom-left corner of screen
-    //
-//  NSLog(@"mouse %fx%f", locationInView.x, locationInView.y);
-    
     CGFloat deltaX = locationInView.x - _trackingMousePosition.x;
     CGFloat deltaY = locationInView.y - _trackingMousePosition.y;
-    
-//  NSLog(@"deltaX %.2f, deltaY %.2f", deltaX, deltaY);
 
-    _rotateY -= (deltaX * 0.1f);
-    _rotateX -= (deltaY * 0.1f);
+    if (_isWorldRotating)
+    {
+        _worldRotateY -= (deltaX * 0.1f);
+        _worldRotateX -= (deltaY * 0.1f);
+    }
+    else
+    {
+        _rotateY -= (deltaX * 0.1f);
+        _rotateX -= (deltaY * 0.1f);
+    }
     
     _trackingMousePosition = locationInView;
 }
@@ -394,6 +412,13 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     // Push the world translation matrix so that each time we draw a quad it's translated from the translated world origin,
     // not the translation of the last quad drawn (otherwise we end up drawing a torus).
     glPushMatrix();
+    
+    GLfloat worldRotateY = 360.0f - _worldRotateY;
+    GLfloat worldRotateX = 360.0f - _worldRotateX;
+    
+    glRotatef(worldRotateY, 0.0f, 1.0f, 0.0);       // rotation around Y-axis (looking left and right)
+    glRotatef(worldRotateX, 1.0f, 0.0f, 0.0);       // rotation around Y-axis (looking left and right)
+    
     glTranslatef(x, y, z);
 
     // x, y, z represent the vector along which the rotation occurs, in our case, the y axis
@@ -442,109 +467,5 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glPopMatrix();
 }
 
-- (void)drawTriangleAndSquareWithRotation:(double)elapsed_seconds
-{
-    // In order to maintain smooth rotation the amount of angle to add grows and shrinks depending on the frame rate
-    _rotationAngle += (50.5 * elapsed_seconds);
-
-    glColor3f(0, 1, 0);
-    
-    // Translation accumulates, each translation is from last position
-    glTranslatef(-1.5f, 0.0f, -6.0f);
-    
-    // x, y, z represent the vector along which the rotation occurs, in our case, the y axis
-    glRotatef(_rotationAngle, 0, 1, 0);
-    
-    // All co-ordinates are relative to the translated position
-    glBegin(GL_TRIANGLES);
-    {
-        glVertex3f( 0.0f, 1.0f, 0.0f);              // Top
-        glColor3f(0, 0.3, 0);
-        glVertex3f(-1.0f,-1.0f, 0.0f);              // Bottom Left
-        glVertex3f( 1.0f,-1.0f, 0.0f);              // Bottom Right
-    }
-    glEnd();
-    
-    // NOTE: new identity load, must do this here because otherwise we'd be translating AFTER our rotation which would
-    //       create a completely different (non lateral) translation. Note we also change the co-ordinates from the
-    //       original drawTriangleAndSquare because now we're not translating from our previously translated point, we
-    //       are translating from 0, 0, 0 again.
-    glLoadIdentity();
-
-    glTranslatef(1.5f,0.0f,-6.0f);
-    glBegin(GL_QUADS);
-    {
-        glVertex3f(-1.0f, 1.0f, 0.0f);              // Top Left
-        glVertex3f( 1.0f, 1.0f, 0.0f);              // Top Right
-        glVertex3f( 1.0f,-1.0f, 0.0f);              // Bottom Right
-        glVertex3f(-1.0f,-1.0f, 0.0f);              // Bottom Left
-    }
-    glEnd();
-}
-
-- (void)drawTriangleAndSquareWithRotation3D:(double)elapsed_seconds
-{
-    // In order to maintain smooth rotation the amount of angle to add grows and shrinks depending on the frame rate
-    _rotationAngle += (50.5 * elapsed_seconds);      // 0.5 degrees per second
-    
-    // Translation accumulates, each translation is from last position
-    glTranslatef(-1.5f, 0.0f, -6.0f);
-    
-    // x, y, z represent the vector along which the rotation occurs, in our case, the y axis
-    glRotatef(_rotationAngle, 0, 1, 0);
-    
-    // All co-ordinates are relative to the translated position
-    //
-    // Create a pyramid. Top is +1 from its center, bottom is -1 from its center and -1 or +1 on x.
-    //
-    // Draw the triangle faces in counter-clockwise direction beginning with front face.
-    //
-    // Our pyramid does not need a bottom face because we only ever rotate it on its y axis (see ahove)
-    glBegin(GL_TRIANGLES);
-    {
-        // Front face
-        glColor3f(1.0f,0.0f,0.0f);          // Red
-        glVertex3f( 0.0f, 1.0f, 0.0f);      // Top Of Triangle (Front)
-        glColor3f(0.0f,1.0f,0.0f);          // Green
-        glVertex3f(-1.0f,-1.0f, 1.0f);      // Left Of Triangle (Front) - counter clockwise
-        glColor3f(0.0f,0.0f,1.0f);          // Blue
-        glVertex3f( 1.0f,-1.0f, 1.0f);      // Right Of Triangle (Front) - counter clockwise
-        
-        // Right face
-        glColor3f(1.0f,0.0f,0.0f);          // Red
-        glVertex3f( 0.0f, 1.0f, 0.0f);      // Top Of Triangle (Right)
-        glColor3f(0.0f,0.0f,1.0f);          // Blue
-        glVertex3f( 1.0f,-1.0f, 1.0f);      // Left Of Triangle (Right)
-        glColor3f(0.0f,1.0f,0.0f);          // Green
-        glVertex3f( 1.0f,-1.0f, -1.0f);     // Right Of Triangle (Right)
-        
-        // Back face
-        glColor3f(1.0f,0.0f,0.0f);          // Red
-        glVertex3f( 0.0f, 1.0f, 0.0f);      // Top Of Triangle (Back)
-        glColor3f(0.0f,1.0f,0.0f);          // Green
-        glVertex3f( 1.0f,-1.0f, -1.0f);     // Left Of Triangle (Back)
-        glColor3f(0.0f,0.0f,1.0f);          // Blue
-        glVertex3f(-1.0f,-1.0f, -1.0f);     // Right Of Triangle (Back)
-        
-        // NOTE: We purposely leave off the left face so we can see into the pyramid
-    }
-    glEnd();        // closes path, creates polygon out of faces
-    
-    // NOTE: new identity load, must do this here because otherwise we'd be translating AFTER our rotation which would
-    //       create a completely different (non lateral) translation. Note we also change the co-ordinates from the
-    //       original drawTriangleAndSquare because now we're not translating from our previously translated point, we
-    //       are translating from 0, 0, 0 again.
-    glLoadIdentity();
-    
-    glTranslatef(1.5f,0.0f,-6.0f);
-    glBegin(GL_QUADS);
-    {
-        glVertex3f(-1.0f, 1.0f, 0.0f);              // Top Left
-        glVertex3f( 1.0f, 1.0f, 0.0f);              // Top Right
-        glVertex3f( 1.0f,-1.0f, 0.0f);              // Bottom Right
-        glVertex3f(-1.0f,-1.0f, 0.0f);              // Bottom Left
-    }
-    glEnd();
-}
 
 @end
