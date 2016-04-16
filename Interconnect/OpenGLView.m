@@ -338,12 +338,21 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         
         NSLog(@"Orbital %d with %d nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], nodeCount, planeCount, degreeSpacing);
 
-        glColor3f((1.0 / orbitalCount) * [orbitalNumber floatValue], 0, 0);
+//      glColor3f((1.0 / orbitalCount) * [orbitalNumber floatValue], 0, 0);
+        if ([orbitalNumber intValue] == 1)
+        {
+            glColor3f(1, 0, 0);
+        }
+        else
+        {
+            glColor3f(0, 0, 1);
+        }
         
         NSUInteger nodesDrawn = 0;
-        for (float theta = 0; theta < 360.0f; theta += degreeSpacing)
+        float thetaOffset = [orbitalNumber intValue] * 30.0;
+        for (float theta = thetaOffset; theta < (thetaOffset + 360.0f); theta += degreeSpacing)
         {
-            for (float phi = 0; phi < 360.0f; phi += degreeSpacing)
+            for (float phi = 0; phi < 360.0; phi += degreeSpacing)
             {
                 if (nodesDrawn < nodeCount)
                 {
