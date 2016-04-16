@@ -23,10 +23,15 @@
     NodeStore* nodeStore = [NodeStore sharedStore];
     for (int i = 1; i < 4; i++)
     {
-        for (int j = 0; j < 256; j++)
+        for (int j = 0; j < 8; j++)
         {
             Node* node = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d%.d",i,j] andVolume:0.02];
             [nodeStore addNode:node];
+            
+//          if (i == 3 && j == 0)
+            {
+                [node setRadius:0.0];
+            }
         }
     }
     

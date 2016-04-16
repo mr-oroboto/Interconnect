@@ -24,12 +24,32 @@
     {
         _orbital = orbital;
         _volume = volume;
-        _radius = orbital;
+        _radius = (float)orbital;
         _rotation = 0.0f;
         _identifier = [identifier copy];
+        
+        NSLog(@"Node[%@]: Initialised with orbital: %lu, radius: %.2f", identifier, (unsigned long)_orbital, _radius);
     }
     
     return self;
+}
+
+- (void)setRadius:(float)radius
+{
+    if (radius > (float)_orbital)
+    {
+        NSLog(@"Limiting radius %.2f to %.2f", radius, (float)_orbital);
+        radius = (float)_orbital;
+    }
+    else if (radius < 0.0)
+    {
+        NSLog(@"Limiting radius %.2f to 0.0", radius);
+        radius = 0.0;
+    }
+    
+    _radius = radius;
+    
+    NSLog(@"Node[%@]: Set radius to %.2f", _identifier, _radius);
 }
 
 @end

@@ -19,6 +19,7 @@
 #define kEnablePerspective YES
 #define kEnableFPSLog NO
 #define kNodeRotationDegreesPerSecond   50
+#define kNodeRadiusGrowthPerSecond 0.4
 
 @interface OpenGLView()
 
@@ -330,15 +331,14 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     for (NSNumber* orbitalNumber in orbitals)
     {
-        float radius = [orbitalNumber floatValue];
         NSArray* nodes = [orbitals objectForKey:orbitalNumber];
         NSUInteger nodeCount = [nodes count];
         float planeCount = floor(sqrt((double)nodeCount) + 1);
         float degreeSpacing = 360.0f / planeCount;
         
-        NSLog(@"Orbital %.2f with %d nodes generates plane count of %.2f and degree spacing %.2f", radius, nodeCount, planeCount, degreeSpacing);
+        NSLog(@"Orbital %d with %d nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], nodeCount, planeCount, degreeSpacing);
 
-        glColor3f((1.0 / orbitalCount) * radius, 0, 0);
+        glColor3f((1.0 / orbitalCount) * [orbitalNumber floatValue], 0, 0);
         
         NSUInteger nodesDrawn = 0;
         for (float theta = 0; theta < 360.0f; theta += degreeSpacing)
@@ -347,11 +347,21 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             {
                 if (nodesDrawn < nodeCount)
                 {
+                    Node* node = [nodes objectAtIndex:nodesDrawn];
+                    
+                    float radius = node.radius;
+
                     GLfloat x = radius * sin(phi * (2*M_PI / 360.0)) * cos(theta * (2*M_PI / 360.0));
                     GLfloat y = radius * sin(phi * (2*M_PI / 360.0)) * sin(theta * (2*M_PI / 360.0));
                     GLfloat z = radius * cos(phi * (2*M_PI / 360.0));
                     
-                    [self drawNode:[nodes objectAtIndex:nodesDrawn] x:x y:y z:z secondsSinceLastFrame:secondsSinceLastFrame];
+                    [self drawNode:node x:x y:y z:z secondsSinceLastFrame:secondsSinceLastFrame];
+                    
+                    if (node.radius < [orbitalNumber floatValue])
+                    {
+                        // The node needs to float to its true orbital position
+                        [node setRadius:(node.radius + (kNodeRadiusGrowthPerSecond*secondsSinceLastFrame))];
+                    }
                     
                     nodesDrawn++;
                 }
