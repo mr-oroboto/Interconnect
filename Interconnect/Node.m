@@ -23,7 +23,7 @@
     if (self = [super init])
     {
         _orbital = orbital;
-        _volume = volume;
+        _volume = _targetVolume = volume;
         _radius = (float)orbital;
         _rotation = 0.0f;
         _identifier = [identifier copy];
@@ -50,6 +50,24 @@
     _radius = radius;
     
     NSLog(@"Node[%@]: Set radius to %.2f", _identifier, _radius);
+}
+
+- (void)setVolume:(float)volume
+{
+    if (volume > _targetVolume)
+    {
+        NSLog(@"Limiting volume %.2f to %.2f", volume, _targetVolume);
+        volume = (float)_targetVolume;
+    }
+    else if (volume < 0.0)
+    {
+        NSLog(@"Limiting volume %.2f to 0.0", volume);
+        volume = 0.0;
+    }
+    
+    _volume = volume;
+    
+    NSLog(@"Node[%@]: Set volume to %.2f", _identifier, _volume);
 }
 
 @end

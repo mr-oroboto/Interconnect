@@ -33,6 +33,11 @@
             Node* node = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d%.d",i,j] andVolume:0.02];
             [nodeStore addNode:node];
             [node setRadius:0.0];
+            
+            if (j == 256)
+            {
+                [node setTargetVolume:0.5];
+            }
         }
     }
     

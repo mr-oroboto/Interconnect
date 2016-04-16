@@ -20,6 +20,7 @@
 #define kEnableFPSLog NO
 #define kNodeRotationDegreesPerSecond   50
 #define kNodeRadiusGrowthPerSecond 0.4
+#define kNodeVolumeGrowthPerSecond 0.01
 
 @interface OpenGLView()
 
@@ -388,6 +389,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     {
                         // The node needs to float to its true orbital position
                         [node setRadius:(node.radius + (kNodeRadiusGrowthPerSecond*secondsSinceLastFrame))];
+                    }
+                    
+                    if (node.volume < [node targetVolume])
+                    {
+                        [node setVolume:(node.volume + (kNodeVolumeGrowthPerSecond*secondsSinceLastFrame))];
                     }
                     
                     nodesDrawn++;

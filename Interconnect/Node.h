@@ -12,7 +12,8 @@
 
 @property (nonatomic, readonly) NSString* identifier;
 @property (nonatomic, readonly) NSUInteger orbital;
-@property (nonatomic, readonly) float volume;
+@property (nonatomic) float targetVolume;
+@property (nonatomic) float volume;
 @property (nonatomic) float radius;
 @property (nonatomic) float rotation;
 
