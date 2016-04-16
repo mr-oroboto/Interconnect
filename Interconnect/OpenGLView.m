@@ -18,6 +18,7 @@
 #define kEnableVerticalSync NO
 #define kEnablePerspective YES
 #define kEnableFPSLog NO
+#define kNodeRotationDegreesPerSecond   50
 
 @interface OpenGLView()
 
@@ -278,7 +279,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         glDisable(GL_LIGHTING);
     }
 
-    [self drawSquareWithWorldMovement];
+    [self drawNodeSphere:elapsed_seconds];
     
     [[self openGLContext] flushBuffer];
 
@@ -304,7 +305,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     NSLog(@"x: %.2f z: %.2f", sceneTranslateX, sceneTranslateZ);
 }
 
-- (void)drawSquareWithWorldMovement
+- (void)drawNodeSphere:(double)secondsSinceLastFrame
 {
     glClearColor(0,0,0,0);
     
@@ -322,7 +323,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     [self translateForCamera];
     
     glColor3f(0, 0, 1);
-    [self drawQuad:0 y:0 z:0 size:0.3];     // origin marker
+    [self drawNode:nil x:0 y:0 z:0 secondsSinceLastFrame:secondsSinceLastFrame];     // origin marker
 
     NSDictionary* orbitals = [[NodeStore sharedStore] inhabitedOrbitals];
     NSUInteger orbitalCount = [[orbitals allKeys] count];
@@ -350,7 +351,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     GLfloat y = radius * sin(phi * (2*M_PI / 360.0)) * sin(theta * (2*M_PI / 360.0));
                     GLfloat z = radius * cos(phi * (2*M_PI / 360.0));
                     
-                    [self drawQuad:x y:y z:z size:0.01];
+                    [self drawNode:[nodes objectAtIndex:nodesDrawn] x:x y:y z:z secondsSinceLastFrame:secondsSinceLastFrame];
                     
                     nodesDrawn++;
                 }
@@ -360,12 +361,24 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     }
 }
 
-- (void)drawQuad:(GLfloat)x y:(GLfloat)y z:(GLfloat)z size:(GLfloat)s
+- (void)drawNode:(Node*)node x:(GLfloat)x y:(GLfloat)y z:(GLfloat)z secondsSinceLastFrame:(double)secondsSinceLastFrame
 {
+    GLfloat s = 0.05;
+    GLfloat rotation = 0.0;
+    
+    if (node)
+    {
+        s = node.volume;
+        rotation = node.rotation;
+    }
+    
     // Push the world translation matrix so that each time we draw a quad it's translated from the translated world origin,
     // not the translation of the last quad drawn (otherwise we end up drawing a torus).
     glPushMatrix();
     glTranslatef(x, y, z);
+
+    // x, y, z represent the vector along which the rotation occurs, in our case, the y axis
+    glRotatef(rotation, 0, 1, 0);
 
     glBegin(GL_QUADS);
     {
@@ -400,14 +413,20 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         glVertex3f( s, -s, -s); //F B R
     }
     glEnd();
-    
+
+    if (node)
+    {
+        // In order to maintain smooth rotation the amount of angle to add grows and shrinks depending on the frame rate
+        node.rotation += (kNodeRotationDegreesPerSecond * secondsSinceLastFrame);
+    }
+
     glPopMatrix();
 }
 
 - (void)drawTriangleAndSquareWithRotation:(double)elapsed_seconds
 {
     // In order to maintain smooth rotation the amount of angle to add grows and shrinks depending on the frame rate
-    _rotationAngle += (50.5 * elapsed_seconds);      // 0.5 degrees per second
+    _rotationAngle += (50.5 * elapsed_seconds);
 
     glColor3f(0, 1, 0);
     

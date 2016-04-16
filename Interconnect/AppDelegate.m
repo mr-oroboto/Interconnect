@@ -21,11 +21,11 @@
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
     NodeStore* nodeStore = [NodeStore sharedStore];
-    for (int i = 1; i < 2; i++)
+    for (int i = 1; i < 4; i++)
     {
-        for (int j = 0; j < 1024; j++)
+        for (int j = 0; j < 256; j++)
         {
-            Node* node = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d%.d",i,j] andVolume:1.0];
+            Node* node = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d%.d",i,j] andVolume:0.02];
             [nodeStore addNode:node];
         }
     }

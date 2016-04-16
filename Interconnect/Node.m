@@ -25,6 +25,7 @@
         _orbital = orbital;
         _volume = volume;
         _radius = orbital;
+        _rotation = 0.0f;
         _identifier = [identifier copy];
     }
     

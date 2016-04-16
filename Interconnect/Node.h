@@ -14,6 +14,7 @@
 @property (nonatomic, readonly) NSUInteger orbital;
 @property (nonatomic, readonly) float volume;
 @property (nonatomic, readonly) float radius;
+@property (nonatomic) float rotation;
 
 + (instancetype)createInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;
 
