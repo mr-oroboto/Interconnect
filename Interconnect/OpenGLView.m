@@ -322,7 +322,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glRotatef(sceneRotateX, 1.0f, 0.0f, 0.0);       // rotation around Y-axis (looking left and right)
     glTranslatef(sceneTranslateX, 0.0f, sceneTranslateZ);
     
-    NSLog(@"x: %.2f z: %.2f", sceneTranslateX, sceneTranslateZ);
+//  NSLog(@"x: %.2f z: %.2f", sceneTranslateX, sceneTranslateZ);
 }
 
 - (void)drawNodeSphere:(double)secondsSinceLastFrame
@@ -355,7 +355,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         float planeCount = floor(sqrt((double)nodeCount) + 1);
         float degreeSpacing = 360.0f / planeCount;
         
-        NSLog(@"Orbital %d with %d nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], nodeCount, planeCount, degreeSpacing);
+        NSLog(@"Orbital %d with %lu nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], (unsigned long)nodeCount, planeCount, degreeSpacing);
 
 //      glColor3f((1.0 / orbitalCount) * [orbitalNumber floatValue], 0, 0);
         if ([orbitalNumber intValue] == 1)

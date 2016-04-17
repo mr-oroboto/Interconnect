@@ -12,5 +12,11 @@
 @interface Host : Node
 
 @property (nonatomic, copy) NSString* ipAddress;
+@property (nonatomic) NSUInteger bytesSent;
+@property (nonatomic) NSUInteger bytesReceived;
+
++ (instancetype)createInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;
+
+- (NSUInteger)bytesTransferred;
 
 @end

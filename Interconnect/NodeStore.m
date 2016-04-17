@@ -8,11 +8,13 @@
 
 #import "NodeStore.h"
 #import "Node.h"
+#import "Host.h"
 
 @interface NodeStore ()
 
 @property (nonatomic, strong) NSMutableDictionary* orbitals;
 @property (nonatomic, strong) NSMutableDictionary* nodes;
+@property (nonatomic) NSUInteger largestBytesSeen;
 
 @end
 
@@ -44,12 +46,36 @@
     {
         _orbitals = [[NSMutableDictionary alloc] init];
         _nodes = [[NSMutableDictionary alloc] init];
+        _largestBytesSeen = 0.0;
     }
     
     return self;
 }
 
 #pragma mark - Node Management
+
+- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount addBytes:(NSUInteger)bytes
+{
+    Host* node = self.nodes[identifier];
+    
+    // @todo: deal with hop count changes
+
+    if ( ! node)
+    {
+        node = [Host createInOrbital:hopCount withIdentifier:identifier andVolume:0.1];
+        [self addNode:node];
+    }
+    
+    NSUInteger totalBytes = [node bytesTransferred] + bytes;
+    if (totalBytes > _largestBytesSeen)
+    {
+        _largestBytesSeen = totalBytes;
+    }
+    
+    // Biggest transferror has maximum size of 1.0, everyone else is a fraction of that based on transfer
+    float volume = (totalBytes / _largestBytesSeen) * 1.0;
+    [node setTargetVolume:volume];
+}
 
 - (void)addNode:(Node*)node
 {
@@ -59,6 +85,8 @@
         NSLog(@"%@ already exists in store, not adding", node.identifier);
         return;
     }
+    
+    self.nodes[node.identifier] = node;
 
     // Do we already have nodes in this orbital?
     NSNumber* orbitalName = [NSNumber numberWithUnsignedInteger:node.orbital];

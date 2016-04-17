@@ -17,4 +17,6 @@
 - (void)addNode:(Node*)node;
 - (NSDictionary*)inhabitedOrbitals;
 
+- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount addBytes:(NSUInteger)bytes;
+
 @end
