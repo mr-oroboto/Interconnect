@@ -11,10 +11,10 @@
 @interface Node : NSObject
 
 @property (nonatomic, readonly) NSString* identifier;
-@property (nonatomic, readonly) NSUInteger orbital;
+@property (nonatomic) NSUInteger orbital;
+@property (nonatomic) float radius;
 @property (nonatomic) float targetVolume;
 @property (nonatomic) float volume;
-@property (nonatomic) float radius;
 @property (nonatomic) float rotation;
 
 + (instancetype)createInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;

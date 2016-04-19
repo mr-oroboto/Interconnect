@@ -7,8 +7,8 @@
 //
 
 #import "CaptureWorker.h"
-#import "NodeStore.h"
-#import "Node.h"
+#import "HostStore.h"
+#import "Host.h"
 #import "PacketHeaders.h"
 #import <pcap/pcap.h>
 #import <arpa/inet.h>
@@ -164,7 +164,7 @@
     
     NSString* srcHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_saddr)];
     NSString* dstHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_daddr)];
-    unsigned int transferBytes = header->len;
+    unsigned int transferBytes = ntohs(ip_hdr->ip_len);     // don't include ethernet frame etc
     
     if (ip_hdr->ip_proto == IPPROTO_TCP)
     {
@@ -182,8 +182,6 @@
         unsigned int payload_len = ntohs(ip_hdr->ip_len) - ip_hdr_len - tcp_hdr_len;
         
         NSLog(@"%@ -> %@: TCP srcPort[%d] -> dstPort[%d] of %d bytes", srcHost, dstHost, ntohs(tcp_hdr->tcp_sport), ntohs(tcp_hdr->tcp_dport), payload_len);
-        
-        transferBytes = payload_len;
     }
     else if (ip_hdr->ip_proto == IPPROTO_UDP)
     {
@@ -200,11 +198,13 @@
     
     if (ip_hdr->ip_saddr.s_addr == _interfaceAddress)
     {
-        [self updateNode:dstHost withHopCount:5 /* todo */ andTransferBytes:transferBytes];
+        // traffic from us to them
+        [self updateNode:dstHost withHopCount:2 /* todo */ addBytesToUs:0 addBytesFromUs:transferBytes];
     }
     else if (ip_hdr->ip_daddr.s_addr == _interfaceAddress)
     {
-        [self updateNode:srcHost withHopCount:5 /* todo */ andTransferBytes:transferBytes];
+        // traffic from them to us
+        [self updateNode:srcHost withHopCount:2 /* todo */ addBytesToUs:transferBytes addBytesFromUs:0];
     }
 }
 
@@ -231,10 +231,10 @@
     return NO;
 }
 
-- (void)updateNode:(NSString*)nodeIdentifer withHopCount:(NSUInteger)hopCount andTransferBytes:(unsigned int)transferBytes
+- (void)updateNode:(NSString*)nodeIdentifer withHopCount:(NSUInteger)hopCount addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs
 {
     void (^updateBlock)() = ^() {
-        [[NodeStore sharedStore] updateHost:nodeIdentifer withHopCount:hopCount addBytes:transferBytes];
+        [[HostStore sharedStore] updateHost:nodeIdentifer withHopCount:hopCount addBytesIn:bytesFromUs addBytesOut:bytesToUs];
     };
     
     dispatch_async(dispatch_get_main_queue(), updateBlock);

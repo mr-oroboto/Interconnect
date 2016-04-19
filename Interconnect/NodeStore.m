@@ -8,13 +8,11 @@
 
 #import "NodeStore.h"
 #import "Node.h"
-#import "Host.h"
 
 @interface NodeStore ()
 
 @property (nonatomic, strong) NSMutableDictionary* orbitals;
 @property (nonatomic, strong) NSMutableDictionary* nodes;
-@property (nonatomic) NSUInteger largestBytesSeen;
 
 @end
 
@@ -22,31 +20,12 @@
 
 #pragma mark - Initialisation
 
-+ (instancetype)sharedStore
-{
-    static NodeStore *sharedStore;
-    static dispatch_once_t token;
-    
-    dispatch_once(&token, ^{
-        sharedStore = [[self alloc] initPrivate];
-    });
-    
-    return sharedStore;
-}
-
 - (instancetype)init
-{
-    [NSException raise:@"Singleton" format:@"Use +[NodeStore sharedStore]"];
-    return nil;
-}
-
-- (instancetype)initPrivate
 {
     if (self = [super init])
     {
         _orbitals = [[NSMutableDictionary alloc] init];
         _nodes = [[NSMutableDictionary alloc] init];
-        _largestBytesSeen = 0.0;
     }
     
     return self;
@@ -54,33 +33,10 @@
 
 #pragma mark - Node Management
 
-- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount addBytes:(NSUInteger)bytes
-{
-    Host* node = self.nodes[identifier];
-    
-    // @todo: deal with hop count changes
-
-    if ( ! node)
-    {
-        node = [Host createInOrbital:hopCount withIdentifier:identifier andVolume:0.1];
-        [self addNode:node];
-    }
-    
-    NSUInteger totalBytes = [node bytesTransferred] + bytes;
-    if (totalBytes > _largestBytesSeen)
-    {
-        _largestBytesSeen = totalBytes;
-    }
-    
-    // Biggest transferror has maximum size of 1.0, everyone else is a fraction of that based on transfer
-    float volume = (totalBytes / _largestBytesSeen) * 1.0;
-    [node setTargetVolume:volume];
-}
-
 - (void)addNode:(Node*)node
 {
     // Do we already have this node? If so, this is a no-op (even if the orbital is different).
-    if (self.nodes[node.identifier])
+    if ([self node:node.identifier])
     {
         NSLog(@"%@ already exists in store, not adding", node.identifier);
         return;
@@ -100,6 +56,34 @@
         NSLog(@"Creating new orbital: %@", orbitalName);
         self.orbitals[orbitalName] = [[NSMutableArray alloc] initWithObjects:node, nil];
     }
+}
+
+- (void)updateNode:(Node*)node withOrbital:(NSUInteger)orbital
+{
+    NSNumber* oldOrbitalName = [NSNumber numberWithUnsignedInteger:node.orbital];
+    NSNumber* newOrbitalName = [NSNumber numberWithUnsignedInteger:orbital];
+
+    // Remove the node from its current orbital
+    [self.orbitals[oldOrbitalName] removeObject:node];
+    
+    // Add the new to its new orbital
+    if (self.orbitals[newOrbitalName])
+    {
+        NSMutableArray* orbitalNodes = self.orbitals[newOrbitalName];
+        [orbitalNodes addObject:node];
+    }
+    else
+    {
+        NSLog(@"Creating new orbital: %@", newOrbitalName);
+        self.orbitals[newOrbitalName] = [[NSMutableArray alloc] initWithObjects:node, nil];
+    }
+    
+    node.orbital = orbital;
+}
+
+- (Node*)node:(NSString*)identifier
+{
+    return self.nodes[identifier];
 }
 
 - (NSDictionary*)inhabitedOrbitals

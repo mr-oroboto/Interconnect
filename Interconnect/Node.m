@@ -8,8 +8,8 @@
 
 #import "Node.h"
 
-@interface Node ()
-@end
+#define kMinRadius 0
+#define kMinVolume 0.001
 
 @implementation Node
 
@@ -36,15 +36,10 @@
 
 - (void)setRadius:(float)radius
 {
-    if (radius > (float)_orbital)
+    if (radius < kMinRadius)
     {
-        NSLog(@"Limiting radius %.2f to %.2f", radius, (float)_orbital);
-        radius = (float)_orbital;
-    }
-    else if (radius < 0.0)
-    {
-        NSLog(@"Limiting radius %.2f to 0.0", radius);
-        radius = 0.0;
+        NSLog(@"Limiting radius %.2f to %.2f", radius, kMinRadius);
+        radius = kMinRadius;
     }
     
     _radius = radius;
@@ -54,15 +49,10 @@
 
 - (void)setVolume:(float)volume
 {
-    if (volume > _targetVolume)
+    if (volume < kMinVolume)
     {
-        NSLog(@"Limiting volume %.2f to %.2f", volume, _targetVolume);
-        volume = (float)_targetVolume;
-    }
-    else if (volume < 0.0)
-    {
-        NSLog(@"Limiting volume %.2f to 0.0", volume);
-        volume = 0.0;
+        NSLog(@"Limiting volume %.2f to %.2f", volume, kMinVolume);
+        volume = kMinVolume;
     }
     
     _volume = volume;

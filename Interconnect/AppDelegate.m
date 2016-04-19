@@ -7,7 +7,7 @@
 //
 
 #import "AppDelegate.h"
-#import "NodeStore.h"
+#import "HostStore.h"
 #import "Host.h"
 #import "CaptureWorker.h"
 
@@ -21,7 +21,8 @@
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
     CaptureWorker* worker = [[CaptureWorker alloc] init];
-    [worker startCapture];
+    [self createSampleData];
+//  [worker startCapture];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
@@ -33,26 +34,36 @@
 
 - (void)createSampleData
 {
-    NodeStore* nodeStore = [NodeStore sharedStore];
+    HostStore* hostStore = [HostStore sharedStore];
     for (int i = 1; i < 3; i++)
     {
-        for (int j = 0; j < 512; j++)
+        for (int j = 0; j < 256; j++)
         {
             if (i == 2)
             {
                 i = 4;
             }
             
-            Node* node = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d.%d",i,j] andVolume:0.02];
-            [nodeStore addNode:node];
-            [node setRadius:0.0];
+            Host* host = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d.%d",i,j] andVolume:0.02];
+            [hostStore addNode:host];
+            [host setRadius:0.0];
             
-            if (j == 256)
+            if (j == 128)
             {
-                [node setTargetVolume:0.5];
+                [host setTargetVolume:0.5];
+                [hostStore updateHost:host withHopCount:8];
             }
         }
     }
+    
+    NSTimeInterval interval = 10.0;
+    [NSTimer scheduledTimerWithTimeInterval:interval target:self selector:@selector(go) userInfo:nil repeats:NO];
+}
+
+- (void)go
+{
+    NSLog(@"firing timer");
+    [[HostStore sharedStore] updateHost:@"1.128" withHopCount:5];
 }
 
 @end

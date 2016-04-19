@@ -10,7 +10,7 @@
 #import <OpenGL/gl.h>
 #import <OpenGL/glu.h>
 #import <time.h>
-#import "NodeStore.h"
+#import "HostStore.h"
 #import "Node.h"
 
 //#define kPiOn180 M_PI / 180.0
@@ -263,8 +263,20 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                                     CVOptionFlags* flagsOut,
                                     void* displayLinkContext)
 {
-    CVReturn result = [(__bridge OpenGLView*)displayLinkContext getFrameForTime:outputTime actualTime:now];
-    return result;
+    /**
+     * This method is called on the high priority display link thread but we re-dispatch it to the main thread for safe
+     * access to the node store.
+     *
+     * @todo: fix this crap by better synchronisation with the underlying data, add a critical section
+     */
+//    void (^updateBlock)() = ^() {
+//        [(__bridge OpenGLView*)displayLinkContext getFrameForTime:outputTime actualTime:now];
+//    };
+//    
+//    dispatch_async(dispatch_get_main_queue(), updateBlock);
+//
+//    return kCVReturnSuccess;
+    return         [(__bridge OpenGLView*)displayLinkContext getFrameForTime:outputTime actualTime:now];
 }
 
 /**
@@ -297,6 +309,15 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     else
     {
         glDisable(GL_LIGHTING);
+    }
+
+    if (elapsed_seconds > 1)
+    {
+        elapsed_seconds = 1;
+    }
+    else if (elapsed_seconds < 0.01)    // ~100fps
+    {
+        elapsed_seconds = 0.01;
     }
 
     [self drawNodeSphere:elapsed_seconds];
@@ -342,10 +363,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     // This translates the origin (0, 0, 0) to a new origin
     [self translateForCamera];
     
-    glColor3f(0, 0, 1);
+    glColor3f(1, 0, 0);
     [self drawNode:nil x:0 y:0 z:0 secondsSinceLastFrame:secondsSinceLastFrame];     // origin marker
 
-    NSDictionary* orbitals = [[NodeStore sharedStore] inhabitedOrbitals];
+    NSDictionary* orbitals = [[HostStore sharedStore] inhabitedOrbitals];
     NSUInteger orbitalCount = [[orbitals allKeys] count];
 
     for (NSNumber* orbitalNumber in orbitals)
@@ -355,17 +376,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         float planeCount = floor(sqrt((double)nodeCount) + 1);
         float degreeSpacing = 360.0f / planeCount;
         
-        NSLog(@"Orbital %d with %lu nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], (unsigned long)nodeCount, planeCount, degreeSpacing);
+//      NSLog(@"Orbital %d with %lu nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], (unsigned long)nodeCount, planeCount, degreeSpacing);
 
-//      glColor3f((1.0 / orbitalCount) * [orbitalNumber floatValue], 0, 0);
-        if ([orbitalNumber intValue] == 1)
-        {
-            glColor3f(1, 0, 0);
-        }
-        else
-        {
-            glColor3f(0, 0, 1);
-        }
+        glColor3f(0, 0, (1.0 / orbitalCount) * [orbitalNumber floatValue]);
         
         NSUInteger nodesDrawn = 0;
         float thetaOffset = [orbitalNumber intValue] * 30.0;
@@ -390,10 +403,19 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                         // The node needs to float to its true orbital position
                         [node setRadius:(node.radius + (kNodeRadiusGrowthPerSecond*secondsSinceLastFrame))];
                     }
-                    
+                    else if (node.radius > [orbitalNumber floatValue])
+                    {
+                        // The node needs to float to its true orbital position
+                        [node setRadius:(node.radius - (kNodeRadiusGrowthPerSecond*secondsSinceLastFrame))];
+                    }
+
                     if (node.volume < [node targetVolume])
                     {
                         [node setVolume:(node.volume + (kNodeVolumeGrowthPerSecond*secondsSinceLastFrame))];
+                    }
+                    else if (node.volume > [node targetVolume])
+                    {
+                        [node setVolume:(node.volume - (kNodeVolumeGrowthPerSecond*secondsSinceLastFrame))];
                     }
                     
                     nodesDrawn++;

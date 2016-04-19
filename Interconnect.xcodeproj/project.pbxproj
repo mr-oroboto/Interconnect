@@ -16,6 +16,7 @@
 		602A9FCD1CC1AC1A0051CFEF /* NodeStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCC1CC1AC1A0051CFEF /* NodeStore.m */; };
 		602A9FD01CC1AC250051CFEF /* Node.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCF1CC1AC250051CFEF /* Node.m */; };
 		602A9FD31CC1AC360051CFEF /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FD21CC1AC360051CFEF /* Host.m */; };
+		606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 606FFB171CC6DE1800A1CF70 /* HostStore.m */; };
 		6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */ = {isa = PBXBuildFile; fileRef = 6085D1F41CC30539001D9820 /* CaptureWorker.m */; };
 		60D8D4D41CBB7A79006ADE15 /* libpcap.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 60D8D4D31CBB7A79006ADE15 /* libpcap.tbd */; };
 /* End PBXBuildFile section */
@@ -37,6 +38,8 @@
 		602A9FCF1CC1AC250051CFEF /* Node.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Node.m; sourceTree = "<group>"; };
 		602A9FD11CC1AC360051CFEF /* Host.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Host.h; sourceTree = "<group>"; };
 		602A9FD21CC1AC360051CFEF /* Host.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Host.m; sourceTree = "<group>"; };
+		606FFB161CC6DE1800A1CF70 /* HostStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HostStore.h; sourceTree = "<group>"; };
+		606FFB171CC6DE1800A1CF70 /* HostStore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HostStore.m; sourceTree = "<group>"; };
 		6085D1F31CC30539001D9820 /* CaptureWorker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CaptureWorker.h; sourceTree = "<group>"; };
 		6085D1F41CC30539001D9820 /* CaptureWorker.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CaptureWorker.m; sourceTree = "<group>"; };
 		6085D1F71CC3102C001D9820 /* PacketHeaders.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PacketHeaders.h; sourceTree = "<group>"; };
@@ -112,6 +115,8 @@
 			children = (
 				602A9FCB1CC1AC1A0051CFEF /* NodeStore.h */,
 				602A9FCC1CC1AC1A0051CFEF /* NodeStore.m */,
+				606FFB161CC6DE1800A1CF70 /* HostStore.h */,
+				606FFB171CC6DE1800A1CF70 /* HostStore.m */,
 				602A9FCE1CC1AC250051CFEF /* Node.h */,
 				602A9FCF1CC1AC250051CFEF /* Node.m */,
 				602A9FD11CC1AC360051CFEF /* Host.h */,
@@ -200,6 +205,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				602A9FD01CC1AC250051CFEF /* Node.m in Sources */,
+				606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */,
 				600333591CBA0673007BA868 /* main.m in Sources */,
 				602A9FCD1CC1AC1A0051CFEF /* NodeStore.m in Sources */,
 				600333691CBA06B8007BA868 /* OpenGLView.m in Sources */,

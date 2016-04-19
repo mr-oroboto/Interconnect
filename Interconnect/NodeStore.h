@@ -12,11 +12,9 @@
 
 @interface NodeStore : NSObject
 
-+ (instancetype)sharedStore;
-
 - (void)addNode:(Node*)node;
+- (void)updateNode:(Node*)node withOrbital:(NSUInteger)orbital;
+- (Node*)node:(NSString*)identifier;
 - (NSDictionary*)inhabitedOrbitals;
-
-- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount addBytes:(NSUInteger)bytes;
 
 @end
