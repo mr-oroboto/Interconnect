@@ -264,19 +264,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                                     void* displayLinkContext)
 {
     /**
-     * This method is called on the high priority display link thread but we re-dispatch it to the main thread for safe
-     * access to the node store.
-     *
-     * @todo: fix this crap by better synchronisation with the underlying data, add a critical section
+     * This method is called on the high priority display link thread and must synchronise access to the data store
      */
-//    void (^updateBlock)() = ^() {
-//        [(__bridge OpenGLView*)displayLinkContext getFrameForTime:outputTime actualTime:now];
-//    };
-//    
-//    dispatch_async(dispatch_get_main_queue(), updateBlock);
-//
-//    return kCVReturnSuccess;
-    return         [(__bridge OpenGLView*)displayLinkContext getFrameForTime:outputTime actualTime:now];
+    return [(__bridge OpenGLView*)displayLinkContext getFrameForTime:outputTime actualTime:now];
 }
 
 /**
@@ -365,8 +355,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     
     glColor3f(1, 0, 0);
     [self drawNode:nil x:0 y:0 z:0 secondsSinceLastFrame:secondsSinceLastFrame];     // origin marker
+    HostStore *hostStore = [HostStore sharedStore];
 
-    NSDictionary* orbitals = [[HostStore sharedStore] inhabitedOrbitals];
+    [hostStore lockStore];
+    NSDictionary* orbitals = [hostStore inhabitedOrbitals];
     NSUInteger orbitalCount = [[orbitals allKeys] count];
 
     for (NSNumber* orbitalNumber in orbitals)
@@ -424,6 +416,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         }
         assert(nodesDrawn == nodeCount);
     }
+    
+    [hostStore unlockStore];
 }
 
 - (void)drawNode:(Node*)node x:(GLfloat)x y:(GLfloat)y z:(GLfloat)z secondsSinceLastFrame:(double)secondsSinceLastFrame

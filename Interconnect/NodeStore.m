@@ -13,6 +13,7 @@
 
 @property (nonatomic, strong) NSMutableDictionary* orbitals;
 @property (nonatomic, strong) NSMutableDictionary* nodes;
+@property (nonatomic, strong) NSLock* lock;
 
 @end
 
@@ -26,9 +27,22 @@
     {
         _orbitals = [[NSMutableDictionary alloc] init];
         _nodes = [[NSMutableDictionary alloc] init];
+        _lock = [[NSLock alloc] init];
     }
     
     return self;
+}
+
+#pragma mark - Synchronisation
+
+- (void)lockStore
+{
+    [self.lock lock];
+}
+
+- (void)unlockStore
+{
+    [self.lock unlock];
 }
 
 #pragma mark - Node Management

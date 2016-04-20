@@ -55,6 +55,8 @@
 
 - (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount addBytesIn:(NSUInteger)bytesIn addBytesOut:(NSUInteger)bytesOut
 {
+    [self lockStore];
+
     Host* host = (Host*)[self node:identifier];
     
     // @todo: deal with hop count changes
@@ -100,16 +102,22 @@
     }
 
     [host setTargetVolume:volume];
+    
+    [self unlockStore];
 }
 
 - (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount
 {
+    [self lockStore];
+
     Host* host = (Host*)[self node:identifier];
 
     if (host)
     {
         [super updateNode:host withOrbital:hopCount];
     }
+    
+    [self unlockStore];
 }
 
 @end

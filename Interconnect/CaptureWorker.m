@@ -233,11 +233,7 @@
 
 - (void)updateNode:(NSString*)nodeIdentifer withHopCount:(NSUInteger)hopCount addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs
 {
-    void (^updateBlock)() = ^() {
-        [[HostStore sharedStore] updateHost:nodeIdentifer withHopCount:hopCount addBytesIn:bytesFromUs addBytesOut:bytesToUs];
-    };
-    
-    dispatch_async(dispatch_get_main_queue(), updateBlock);
+    [[HostStore sharedStore] updateHost:nodeIdentifer withHopCount:hopCount addBytesIn:bytesFromUs addBytesOut:bytesToUs];
 }
 
 @end

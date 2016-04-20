@@ -35,15 +35,10 @@
 - (void)createSampleData
 {
     HostStore* hostStore = [HostStore sharedStore];
-    for (int i = 1; i < 3; i++)
+    for (int i = 1; i < 5; i += 3)
     {
         for (int j = 0; j < 256; j++)
         {
-            if (i == 2)
-            {
-                i = 4;
-            }
-            
             Host* host = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d.%d",i,j] andVolume:0.02];
             [hostStore addNode:host];
             [host setRadius:0.0];
