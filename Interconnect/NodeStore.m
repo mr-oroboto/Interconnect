@@ -72,6 +72,12 @@
     }
 }
 
+/**
+ * @todo: there is a visual bug here in that setting the new orbital causes nodes to jump around as 
+ *        they are redrawn because their new orbital will contain a different number of nodes to the
+ *        source orbital. possible solution is to allow them to float to their target orbital and 
+ *        then change the actual orbital so any jumping occurs at the end of the animation.
+ */
 - (void)updateNode:(Node*)node withOrbital:(NSUInteger)orbital
 {
     NSNumber* oldOrbitalName = [NSNumber numberWithUnsignedInteger:node.orbital];

@@ -46,12 +46,12 @@
             if (j == 128)
             {
                 [host setTargetVolume:0.5];
-                [hostStore updateHost:host withHopCount:8];
+                [hostStore updateHost:host.identifier withHopCount:8];
             }
         }
     }
     
-    NSTimeInterval interval = 10.0;
+    NSTimeInterval interval = 20.0;
     [NSTimer scheduledTimerWithTimeInterval:interval target:self selector:@selector(go) userInfo:nil repeats:NO];
 }
 

@@ -393,21 +393,21 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     if (node.radius < [orbitalNumber floatValue])
                     {
                         // The node needs to float to its true orbital position
-                        [node setRadius:(node.radius + (kNodeRadiusGrowthPerSecond*secondsSinceLastFrame))];
+                        [node growRadius:kNodeRadiusGrowthPerSecond*secondsSinceLastFrame];
                     }
                     else if (node.radius > [orbitalNumber floatValue])
                     {
                         // The node needs to float to its true orbital position
-                        [node setRadius:(node.radius - (kNodeRadiusGrowthPerSecond*secondsSinceLastFrame))];
+                        [node shrinkRadius:kNodeRadiusGrowthPerSecond*secondsSinceLastFrame];
                     }
 
                     if (node.volume < [node targetVolume])
                     {
-                        [node setVolume:(node.volume + (kNodeVolumeGrowthPerSecond*secondsSinceLastFrame))];
+                        [node growVolume:kNodeVolumeGrowthPerSecond*secondsSinceLastFrame];
                     }
                     else if (node.volume > [node targetVolume])
                     {
-                        [node setVolume:(node.volume - (kNodeVolumeGrowthPerSecond*secondsSinceLastFrame))];
+                        [node shrinkVolume:kNodeVolumeGrowthPerSecond*secondsSinceLastFrame];
                     }
                     
                     nodesDrawn++;

@@ -20,4 +20,9 @@
 + (instancetype)createInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;
 - (instancetype)initInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;
 
+- (void)growRadius:(float)delta;
+- (void)shrinkRadius:(float)delta;
+- (void)growVolume:(float)delta;
+- (void)shrinkVolume:(float)delta;
+
 @end
