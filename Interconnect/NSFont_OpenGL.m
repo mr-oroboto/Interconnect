@@ -38,9 +38,9 @@
 @implementation NSFont (withay_OpenGL)
 
 /*
- * Create the set of display lists for the bitmaps
+ * Create the set of display lists for the font glyph bitmaps
  */
-- (BOOL)makeGLDisplayListFirst:(unichar)first count:(int)count base:(GLint)base
+- (BOOL)makeGLDisplayListsWithFirstCharacter:(unichar)first count:(int)count displayListBase:(GLint)base
 {
     GLint curListIndex;
     NSColor *blackColor;
@@ -79,6 +79,7 @@
     theImage = [[NSImage alloc] initWithSize:NSMakeSize(0, 0)];
     retval = TRUE;
 
+    // Create a display list for each character, each list holding a bitmap of the character's glyph
     for (dListNum = base, currentUnichar = first; currentUnichar < first + count; dListNum++, currentUnichar++)
     {
         currentChar = [NSString stringWithCharacters:&currentUnichar length:1];

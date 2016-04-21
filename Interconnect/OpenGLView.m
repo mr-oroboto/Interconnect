@@ -38,7 +38,8 @@
 @property (nonatomic) GLfloat worldRotateX;
 @property (nonatomic) NSPoint trackingMousePosition;
 
-@property (nonatomic) GLuint fontDisplayListBase;       // base display list for font set
+@property (nonatomic) GLuint displayListNode;           // display list for node objects
+@property (nonatomic) GLuint displayListFontBase;       // base pointer to display lists for font set
 
 @end
 
@@ -76,7 +77,8 @@
 {
     NSLog(@"prepareOpenGL");
     
-    [self buildFont];
+    [self buildFontDisplayList];
+    [self buildNodeDisplayList];
     
     glShadeModel(GL_SMOOTH);
     glClearColor(0, 0, 0, 0);
@@ -129,20 +131,20 @@
     // Release the display link
     CVDisplayLinkRelease(_displayLink);
     
-    glDeleteLists(_fontDisplayListBase, kDisplayListCountForText);
+    glDeleteLists(_displayListFontBase, kDisplayListCountForText);
+    glDeleteLists(_displayListNode, 1);
 }
 
 #pragma mark - Text
 
-- (void)buildFont
+- (void)buildFontDisplayList
 {
     NSFont *font;
     
-    // 95 since if we do 96, we get the delete character...
-    _fontDisplayListBase = glGenLists(kDisplayListCountForText);   // Storage for 95 textures (one per character)
+    _displayListFontBase = glGenLists(kDisplayListCountForText);   // storage for 95 textures (one per character)
     font = [NSFont fontWithName:@"Courier-Bold" size:10];
 
-    if ( ! [font makeGLDisplayListFirst:' ' count:kDisplayListCountForText base:_fontDisplayListBase])
+    if ( ! [font makeGLDisplayListsWithFirstCharacter:' ' count:kDisplayListCountForText displayListBase:_displayListFontBase])
     {
         NSLog(@"Could not create font display list");
     }
@@ -164,12 +166,17 @@
     va_end(ap);
     
     glPushAttrib(GL_LIST_BIT);                  // push display list bits
-    glListBase(_fontDisplayListBase - 32);
+    
+    // Rebase the base list pointer so that we can use ASCII character codes to index and find
+    // the right display list to draw. 32 == space, the character in our first display list.
+    glListBase(_displayListFontBase - 32);
     uniBuffer = calloc([text length], sizeof(unichar));
     [text getCharacters:uniBuffer];
-    
+
+    // Draw n display lists, the index of each being stored in a word of uniBuffer (the string)
     glCallLists([text length], GL_UNSIGNED_SHORT, uniBuffer);
     free(uniBuffer);
+
     glPopAttrib();                              // pop display list bits
 }
 
@@ -499,6 +506,28 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     // x, y, z represent the vector along which the rotation occurs, in our case, the y axis
     glRotatef(rotation, 0, 1, 0);
 
+    // Scale the node (nominally at size 1,1,1) to the size we need
+    glScalef(s, s, s);
+    
+    glCallList(_displayListNode);
+
+    if (node)
+    {
+        // In order to maintain smooth rotation the amount of angle to add grows and shrinks depending on the frame rate
+        node.rotation += (kNodeRotationDegreesPerSecond * secondsSinceLastFrame);
+    }
+
+    glPopMatrix();
+}
+
+- (void)buildNodeDisplayList
+{
+    GLfloat s = 1.00;
+    
+    _displayListNode = glGenLists(1);
+    
+    glNewList(_displayListNode, GL_COMPILE);
+    
     glBegin(GL_QUADS);
     {
         glVertex3f(-s,  s, -s); //F T L
@@ -532,15 +561,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         glVertex3f( s, -s, -s); //F B R
     }
     glEnd();
-
-    if (node)
-    {
-        // In order to maintain smooth rotation the amount of angle to add grows and shrinks depending on the frame rate
-        node.rotation += (kNodeRotationDegreesPerSecond * secondsSinceLastFrame);
-    }
-
-    glPopMatrix();
+    
+    glEndList();
 }
-
 
 @end

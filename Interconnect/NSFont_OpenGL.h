@@ -48,6 +48,6 @@
 
 @interface NSFont (withay_OpenGL)
 
-- (BOOL)makeGLDisplayListFirst:(unichar)first count:(int)count base:(GLint)base;
+- (BOOL)makeGLDisplayListsWithFirstCharacter:(unichar)first count:(int)count displayListBase:(GLint)base;
 
 @end
