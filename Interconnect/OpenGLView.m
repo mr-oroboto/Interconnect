@@ -40,6 +40,7 @@
 
 @property (nonatomic) GLuint displayListNode;           // display list for node objects
 @property (nonatomic) GLuint displayListFontBase;       // base pointer to display lists for font set
+@property (nonatomic) GLUquadricObj* quadric;
 
 @end
 
@@ -76,6 +77,9 @@
 - (void)prepareOpenGL
 {
     NSLog(@"prepareOpenGL");
+    
+    _quadric = gluNewQuadric();
+    gluQuadricNormals(_quadric, GLU_SMOOTH);
     
     [self buildFontDisplayList];
     [self buildNodeDisplayList];
@@ -133,6 +137,7 @@
     
     glDeleteLists(_displayListFontBase, kDisplayListCountForText);
     glDeleteLists(_displayListNode, 1);
+    gluDeleteQuadric(_quadric);
 }
 
 #pragma mark - Text
@@ -522,45 +527,13 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
 - (void)buildNodeDisplayList
 {
-    GLfloat s = 1.00;
+    GLfloat radius = 1.00;
     
     _displayListNode = glGenLists(1);
     
     glNewList(_displayListNode, GL_COMPILE);
     
-    glBegin(GL_QUADS);
-    {
-        glVertex3f(-s,  s, -s); //F T L
-        glVertex3f( s,  s, -s); //F T R
-        glVertex3f( s, -s, -s); //F B R
-        glVertex3f(-s, -s, -s); //F B L
-        
-        glVertex3f(-s, -s, -s); //F B L
-        glVertex3f( s, -s, -s); //F B R
-        glVertex3f( s, -s,  s); //B B R
-        glVertex3f(-s, -s,  s); //B B L
-        
-        glVertex3f(-s,  s,  s); //B T L
-        glVertex3f( s,  s,  s); //B T R
-        glVertex3f( s, -s,  s); //B B R
-        glVertex3f(-s, -s,  s); //B B L
-        
-        glVertex3f(-s,  s,  s); //B T L
-        glVertex3f(-s,  s, -s); //F T L
-        glVertex3f(-s, -s, -s); //F B L
-        glVertex3f(-s, -s,  s); //B B L
-        
-        glVertex3f(-s,  s,  s); //B T L
-        glVertex3f( s,  s,  s); //B T R
-        glVertex3f( s,  s, -s); //F T R
-        glVertex3f(-s,  s, -s); //F T L
-        
-        glVertex3f( s,  s, -s); //F T R
-        glVertex3f( s,  s,  s); //B T R
-        glVertex3f( s, -s,  s); //B B R
-        glVertex3f( s, -s, -s); //F B R
-    }
-    glEnd();
+    gluSphere(_quadric, radius, 32, 32);
     
     glEndList();
 }
