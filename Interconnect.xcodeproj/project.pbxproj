@@ -18,6 +18,7 @@
 		602A9FD31CC1AC360051CFEF /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FD21CC1AC360051CFEF /* Host.m */; };
 		606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 606FFB171CC6DE1800A1CF70 /* HostStore.m */; };
 		6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */ = {isa = PBXBuildFile; fileRef = 6085D1F41CC30539001D9820 /* CaptureWorker.m */; };
+		60CF9C891CC8C01D00E28888 /* NSFont_OpenGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 60CF9C881CC8C01D00E28888 /* NSFont_OpenGL.m */; };
 		60D8D4D41CBB7A79006ADE15 /* libpcap.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 60D8D4D31CBB7A79006ADE15 /* libpcap.tbd */; };
 /* End PBXBuildFile section */
 
@@ -43,6 +44,8 @@
 		6085D1F31CC30539001D9820 /* CaptureWorker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CaptureWorker.h; sourceTree = "<group>"; };
 		6085D1F41CC30539001D9820 /* CaptureWorker.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CaptureWorker.m; sourceTree = "<group>"; };
 		6085D1F71CC3102C001D9820 /* PacketHeaders.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PacketHeaders.h; sourceTree = "<group>"; };
+		60CF9C871CC8C01D00E28888 /* NSFont_OpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSFont_OpenGL.h; sourceTree = "<group>"; };
+		60CF9C881CC8C01D00E28888 /* NSFont_OpenGL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSFont_OpenGL.m; sourceTree = "<group>"; };
 		60D8D4D31CBB7A79006ADE15 /* libpcap.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libpcap.tbd; path = usr/lib/libpcap.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -104,6 +107,8 @@
 		6003336A1CBA06BC007BA868 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				60CF9C871CC8C01D00E28888 /* NSFont_OpenGL.h */,
+				60CF9C881CC8C01D00E28888 /* NSFont_OpenGL.m */,
 				600333671CBA06B8007BA868 /* OpenGLView.h */,
 				600333681CBA06B8007BA868 /* OpenGLView.m */,
 			);
@@ -212,6 +217,7 @@
 				600333561CBA0673007BA868 /* AppDelegate.m in Sources */,
 				602A9FD31CC1AC360051CFEF /* Host.m in Sources */,
 				6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */,
+				60CF9C891CC8C01D00E28888 /* NSFont_OpenGL.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

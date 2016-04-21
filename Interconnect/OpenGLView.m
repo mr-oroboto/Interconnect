@@ -12,8 +12,8 @@
 #import <time.h>
 #import "HostStore.h"
 #import "Node.h"
+#import "NSFont_OpenGL.h"
 
-//#define kPiOn180 M_PI / 180.0
 #define kPiOn180 0.0174532925f
 #define kEnableVerticalSync NO
 #define kEnablePerspective YES
@@ -21,6 +21,7 @@
 #define kNodeRotationDegreesPerSecond   50
 #define kNodeRadiusGrowthPerSecond 0.4
 #define kNodeVolumeGrowthPerSecond 0.01
+#define kDisplayListCountForText 95
 
 @interface OpenGLView()
 
@@ -36,6 +37,8 @@
 @property (nonatomic) GLfloat worldRotateY;
 @property (nonatomic) GLfloat worldRotateX;
 @property (nonatomic) NSPoint trackingMousePosition;
+
+@property (nonatomic) GLuint fontDisplayListBase;       // base display list for font set
 
 @end
 
@@ -72,6 +75,8 @@
 - (void)prepareOpenGL
 {
     NSLog(@"prepareOpenGL");
+    
+    [self buildFont];
     
     glShadeModel(GL_SMOOTH);
     glClearColor(0, 0, 0, 0);
@@ -123,7 +128,51 @@
     
     // Release the display link
     CVDisplayLinkRelease(_displayLink);
+    
+    glDeleteLists(_fontDisplayListBase, kDisplayListCountForText);
 }
+
+#pragma mark - Text
+
+- (void)buildFont
+{
+    NSFont *font;
+    
+    // 95 since if we do 96, we get the delete character...
+    _fontDisplayListBase = glGenLists(kDisplayListCountForText);   // Storage for 95 textures (one per character)
+    font = [NSFont fontWithName:@"Courier-Bold" size:10];
+
+    if ( ! [font makeGLDisplayListFirst:' ' count:kDisplayListCountForText base:_fontDisplayListBase])
+    {
+        NSLog(@"Could not create font display list");
+    }
+}
+
+- (void) glPrint:(NSString *)fmt, ...
+{
+    NSString* text;
+    va_list ap;
+    unichar* uniBuffer;
+    
+    if (fmt == nil || [ fmt length ] == 0)
+    {
+        return;
+    }
+    
+    va_start(ap, fmt);
+    text = [[NSString alloc] initWithFormat:fmt arguments:ap];
+    va_end(ap);
+    
+    glPushAttrib(GL_LIST_BIT);                  // push display list bits
+    glListBase(_fontDisplayListBase - 32);
+    uniBuffer = calloc([text length], sizeof(unichar));
+    [text getCharacters:uniBuffer];
+    
+    glCallLists([text length], GL_UNSIGNED_SHORT, uniBuffer);
+    free(uniBuffer);
+    glPopAttrib();                              // pop display list bits
+}
+
 
 #pragma mark - Responder Chain
 
@@ -352,6 +401,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     
     // This translates the origin (0, 0, 0) to a new origin
     [self translateForCamera];
+    
+    glColor3f(0, 1, 0);
+    glRasterPos2f(0.06, 0.06);
+    [self glPrint:@"localhost"];
     
     glColor3f(1, 0, 0);
     [self drawNode:nil x:0 y:0 z:0 secondsSinceLastFrame:secondsSinceLastFrame];     // origin marker

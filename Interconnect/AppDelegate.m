@@ -40,8 +40,10 @@
         for (int j = 0; j < 256; j++)
         {
             Host* host = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d.%d",i,j] andVolume:0.02];
+            [hostStore lockStore];
             [hostStore addNode:host];
             [host setRadius:0.0];
+            [hostStore unlockStore];
             
             if (j == 128)
             {
