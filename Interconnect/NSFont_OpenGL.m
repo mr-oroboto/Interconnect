@@ -89,6 +89,7 @@
         
         if (charRect.size.width > 0 && charRect.size.height > 0)
         {
+            // Draw the current character into an image
             [theImage setSize:charRect.size];
             [theImage lockFocus];
             [[NSGraphicsContext currentContext] setShouldAntialias:NO];
@@ -97,6 +98,7 @@
             [currentChar drawInRect:charRect withAttributes:attribDict];
             [theImage unlockFocus];
             
+            // Convert the image into a bitmap that gets stored in the display list
             if ( ! [self makeDisplayList:dListNum withImage:theImage])
             {
                 retval = FALSE;
@@ -175,9 +177,11 @@
         }
     }
 
+    // Drop the bitmap into the display list
     glNewList(listNum, GL_COMPILE);
     glBitmap(pixelsWide, pixelsHigh, 0, 0, pixelsWide, 0, newBuffer);
     glEndList();
+
     free(newBuffer);
 
     return TRUE;
