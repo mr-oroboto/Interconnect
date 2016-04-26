@@ -20,7 +20,6 @@
 #define kEnableVerticalSync NO
 #define kEnablePerspective YES
 #define kEnableFPSLog NO
-#define kNodeRotationDegreesPerSecond   50
 #define kNodeRadiusGrowthPerSecond 0.4
 #define kNodeVolumeGrowthPerSecond 0.01
 #define kDisplayListCountForText 95
@@ -500,12 +499,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (void)drawNode:(Node*)node x:(GLfloat)x y:(GLfloat)y z:(GLfloat)z secondsSinceLastFrame:(double)secondsSinceLastFrame
 {
     GLfloat s = 0.05;
-    GLfloat rotation = 0.0;
     
     if (node)
     {
         s = node.volume;
-        rotation = node.rotation;
     }
     
     // Push the world translation matrix so that each time we draw a quad it's translated from the translated world origin,
@@ -570,19 +567,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     glTranslatef(x, y, z);
 
-    // x, y, z represent the vector along which the rotation occurs, in our case, the y axis
-    glRotatef(rotation, 0, 1, 0);
-
     // Scale the node (nominally at size 1,1,1) to the size we need
     glScalef(s, s, s);
 
     glCallList(_displayListNode);
-
-    if (node)
-    {
-        // In order to maintain smooth rotation the amount of angle to add grows and shrinks depending on the frame rate
-        node.rotation += (kNodeRotationDegreesPerSecond * secondsSinceLastFrame);
-    }
 
     glPopMatrix();
 }

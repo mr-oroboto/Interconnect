@@ -21,8 +21,8 @@
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
     CaptureWorker* worker = [[CaptureWorker alloc] init];
-    [self createSampleData];
-//  [worker startCapture];    
+//  [self createSampleData];
+    [worker startCapture];    
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
