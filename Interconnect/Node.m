@@ -40,13 +40,13 @@
 {
     if (radius < kMinRadius)
     {
-        NSLog(@"Limiting radius %.2f to %.2f", radius, kMinRadius);
+//      NSLog(@"Limiting radius %.2f to %.2f", radius, kMinRadius);
         radius = kMinRadius;
     }
     
     _radius = radius;
     
-    NSLog(@"Node[%@]: Set radius to %.2f", _identifier, _radius);
+//  NSLog(@"Node[%@]: Set radius to %.2f", _identifier, _radius);
 }
 
 - (void)growRadius:(float)delta
@@ -55,13 +55,13 @@
 
     if (newRadius > (float)_orbital)
     {
-        NSLog(@"Limiting radius %.2f to %.2f", newRadius, (float)_orbital);
+//      NSLog(@"Limiting radius %.2f to %.2f", newRadius, (float)_orbital);
         newRadius = (float)_orbital;
     }
     
     _radius = newRadius;
     
-    NSLog(@"Node[%@]: Set radius to %.2f", _identifier, _radius);
+//  NSLog(@"Node[%@]: Set radius to %.2f", _identifier, _radius);
 }
 
 - (void)shrinkRadius:(float)delta
@@ -70,26 +70,26 @@
 
     if (newRadius < (float)_orbital)
     {
-        NSLog(@"Limiting radius %.2f to %.2f", newRadius, (float)_orbital);
+//      NSLog(@"Limiting radius %.2f to %.2f", newRadius, (float)_orbital);
         newRadius = (float)_orbital;
     }
     
     _radius = newRadius;
     
-    NSLog(@"Node[%@]: Set radius to %.2f", _identifier, _radius);
+//  NSLog(@"Node[%@]: Set radius to %.2f", _identifier, _radius);
 }
 
 - (void)setVolume:(float)volume
 {
     if (volume < kMinVolume)
     {
-        NSLog(@"Limiting volume %.2f to %.2f", volume, kMinVolume);
+//      NSLog(@"Limiting volume %.2f to %.2f", volume, kMinVolume);
         volume = kMinVolume;
     }
     
     _volume = volume;
     
-    NSLog(@"Node[%@]: Set volume to %.2f", _identifier, _volume);
+//  NSLog(@"Node[%@]: Set volume to %.2f", _identifier, _volume);
 }
 
 - (void)growVolume:(float)delta
@@ -98,13 +98,13 @@
     
     if (newVolume > _targetVolume)
     {
-        NSLog(@"Limiting volume %.2f to %.2f", newVolume, _targetVolume);
+//      NSLog(@"Limiting volume %.2f to %.2f", newVolume, _targetVolume);
         newVolume = _targetVolume;
     }
     
     _volume = newVolume;
     
-    NSLog(@"Node[%@]: Set volume to %.2f", _identifier, _volume);
+//  NSLog(@"Node[%@]: Set volume to %.2f", _identifier, _volume);
 }
 
 - (void)shrinkVolume:(float)delta
@@ -113,13 +113,13 @@
     
     if (newVolume < _targetVolume)
     {
-        NSLog(@"Limiting volume %.2f to %.2f", newVolume, _targetVolume);
+//      NSLog(@"Limiting volume %.2f to %.2f", newVolume, _targetVolume);
         newVolume = _targetVolume;
     }
     
     _volume = newVolume;
     
-    NSLog(@"Node[%@]: Set volume to %.2f", _identifier, _volume);
+//  NSLog(@"Node[%@]: Set volume to %.2f", _identifier, _volume);
 }
 
 

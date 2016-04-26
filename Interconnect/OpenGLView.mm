@@ -560,8 +560,6 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             node.selected = NO;
         }
     }
-    
-    glTranslatef(x, y, z);
 
     if (node.selected)
     {
@@ -569,6 +567,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         glRasterPos2f(x, y);
         [self glPrint:node.identifier];
     }
+
+    glTranslatef(x, y, z);
 
     // x, y, z represent the vector along which the rotation occurs, in our case, the y axis
     glRotatef(rotation, 0, 1, 0);
