@@ -22,7 +22,7 @@
 {
     CaptureWorker* worker = [[CaptureWorker alloc] init];
     [self createSampleData];
-//  [worker startCapture];
+//  [worker startCapture];    
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
@@ -37,7 +37,7 @@
     HostStore* hostStore = [HostStore sharedStore];
     for (int i = 1; i < 5; i += 3)
     {
-        for (int j = 0; j < 256; j++)
+        for (int j = 0; j < 8; j++)
         {
             Host* host = [Host createInOrbital:i withIdentifier:[NSString stringWithFormat:@"%d.%d",i,j] andVolume:0.02];
             [hostStore lockStore];
@@ -54,12 +54,11 @@
     }
     
     NSTimeInterval interval = 20.0;
-    [NSTimer scheduledTimerWithTimeInterval:interval target:self selector:@selector(go) userInfo:nil repeats:NO];
+    [NSTimer scheduledTimerWithTimeInterval:interval target:self selector:@selector(sampleOrbitalChange) userInfo:nil repeats:NO];
 }
 
-- (void)go
+- (void)sampleOrbitalChange
 {
-    NSLog(@"firing timer");
     [[HostStore sharedStore] updateHost:@"1.128" withHopCount:5];
 }
 

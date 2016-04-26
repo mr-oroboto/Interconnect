@@ -13,6 +13,8 @@
 #import "HostStore.h"
 #import "Node.h"
 #import "NSFont_OpenGL.h"
+#import "glm/vec3.hpp"
+#import "glm/gtc/matrix_transform.hpp"
 
 #define kPiOn180 0.0174532925f
 #define kEnableVerticalSync NO
@@ -22,6 +24,8 @@
 #define kNodeRadiusGrowthPerSecond 0.4
 #define kNodeVolumeGrowthPerSecond 0.01
 #define kDisplayListCountForText 95
+#define kCameraInitialX 0
+#define kCameraInitialZ 8
 
 @interface OpenGLView()
 
@@ -37,6 +41,7 @@
 @property (nonatomic) GLfloat worldRotateY;
 @property (nonatomic) GLfloat worldRotateX;
 @property (nonatomic) NSPoint trackingMousePosition;
+@property (nonatomic) BOOL picking;
 
 @property (nonatomic) GLuint displayListNode;           // display list for node objects
 @property (nonatomic) GLuint displayListFontBase;       // base pointer to display lists for font set
@@ -51,7 +56,7 @@
 - (void)awakeFromNib
 {
     NSLog(@"awakeFromNib");
-    
+
     _lastTicks = 0;
     _isLightOn = NO;
     _isWorldRotating = NO;
@@ -59,12 +64,14 @@
     // "Camera" movement is done by rotating and translating modelview in opposite angle / direction
     _rotateY = 0;
     _rotateX = 0;
-    _translateX = 0;
-    _translateZ = 0;
+    _translateX = kCameraInitialX;
+    _translateZ = kCameraInitialZ;
     
     // "World" movement (spin world around origin)
     _worldRotateX = 0;
     _worldRotateY = 0;
+    
+    _picking = NO;
     
     [self becomeFirstResponder];
 }
@@ -175,7 +182,7 @@
     // Rebase the base list pointer so that we can use ASCII character codes to index and find
     // the right display list to draw. 32 == space, the character in our first display list.
     glListBase(_displayListFontBase - 32);
-    uniBuffer = calloc([text length], sizeof(unichar));
+    uniBuffer = static_cast<unichar*>(calloc([text length], sizeof(unichar)));
     [text getCharacters:uniBuffer];
 
     // Draw n display lists, the index of each being stored in a word of uniBuffer (the string)
@@ -263,6 +270,12 @@
 - (void)mouseDown:(NSEvent *)theEvent
 {
     _trackingMousePosition = [self convertPoint:[theEvent locationInWindow] fromView:nil];
+    _picking = YES;
+}
+
+- (void)mouseUp:(NSEvent*)theEvent
+{
+    _picking = NO;
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent
@@ -374,7 +387,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     [self drawNodeSphere:elapsed_seconds];
     
     [[self openGLContext] flushBuffer];
-
+    
     _lastTicks = actualTime->hostTime;      // should we use outputTime->hostTime?
 
     return kCVReturnSuccess;
@@ -418,10 +431,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glRasterPos2f(0.06, 0.06);
     [self glPrint:@"localhost"];
     
-    glColor3f(1, 0, 0);
     [self drawNode:nil x:0 y:0 z:0 secondsSinceLastFrame:secondsSinceLastFrame];     // origin marker
     HostStore *hostStore = [HostStore sharedStore];
-
     [hostStore lockStore];
     NSDictionary* orbitals = [hostStore inhabitedOrbitals];
     NSUInteger orbitalCount = [[orbitals allKeys] count];
@@ -434,8 +445,6 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         float degreeSpacing = 360.0f / planeCount;
         
 //      NSLog(@"Orbital %d with %lu nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], (unsigned long)nodeCount, planeCount, degreeSpacing);
-
-        glColor3f(0, 0, (1.0 / orbitalCount) * [orbitalNumber floatValue]);
         
         NSUInteger nodesDrawn = 0;
         float thetaOffset = [orbitalNumber intValue] * 30.0;
@@ -452,7 +461,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     GLfloat x = radius * sin(phi * (2*M_PI / 360.0)) * cos(theta * (2*M_PI / 360.0));
                     GLfloat y = radius * sin(phi * (2*M_PI / 360.0)) * sin(theta * (2*M_PI / 360.0));
                     GLfloat z = radius * cos(phi * (2*M_PI / 360.0));
-                    
+
+                    glColor3f(0, 0, (1.0 / orbitalCount) * [orbitalNumber floatValue]);
+
                     [self drawNode:node x:x y:y z:z secondsSinceLastFrame:secondsSinceLastFrame];
                     
                     if (node.radius < [orbitalNumber floatValue])
@@ -483,6 +494,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     }
     
     [hostStore unlockStore];
+ 
 }
 
 - (void)drawNode:(Node*)node x:(GLfloat)x y:(GLfloat)y z:(GLfloat)z secondsSinceLastFrame:(double)secondsSinceLastFrame
@@ -506,14 +518,64 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glRotatef(worldRotateY, 0.0f, 1.0f, 0.0);       // rotation around Y-axis (looking left and right)
     glRotatef(worldRotateX, 1.0f, 0.0f, 0.0);       // rotation around Y-axis (looking left and right)
     
+    if (_picking)
+    {
+        GLint viewport[4];
+        GLdouble modelViewMatrix[16], projectionMatrix[16];
+        GLdouble rayVertexNear[3];
+        GLdouble rayVertexFar[3];
+        
+        glGetDoublev(GL_MODELVIEW_MATRIX, modelViewMatrix);
+        glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix);
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        
+        // Get the ray entry and exit points on the projection frustum
+        gluUnProject(_trackingMousePosition.x, _trackingMousePosition.y, 0.0, modelViewMatrix, projectionMatrix, viewport, &rayVertexNear[0], &rayVertexNear[1], &rayVertexNear[2]);
+        gluUnProject(_trackingMousePosition.x, _trackingMousePosition.y, 1.0, modelViewMatrix, projectionMatrix, viewport, &rayVertexFar[0], &rayVertexFar[1], &rayVertexFar[2]);
+
+        glm::vec3 rayVectorNear, rayVectorFar, sphereCenter;
+        rayVectorNear.x = rayVertexNear[0];
+        rayVectorNear.y = rayVertexNear[1];
+        rayVectorNear.z = rayVertexNear[2];
+        rayVectorFar.x = rayVertexFar[0];
+        rayVectorFar.y = rayVertexFar[1];
+        rayVectorFar.z = rayVertexFar[2];
+        sphereCenter.x = x;
+        sphereCenter.y = y;
+        sphereCenter.z = z;
+        
+        // Ray / sphere intersection test
+        glm::vec3 vectDirToSphere = sphereCenter - rayVectorNear;
+        glm::vec3 vectRayDir = glm::normalize(rayVectorNear - rayVectorFar);
+        float lineLength = glm::distance(rayVectorNear, rayVectorFar);
+        float t = glm::dot(vectDirToSphere, vectRayDir);
+        glm::vec3 closestPoint = rayVectorNear + (vectRayDir*t);
+        
+        if (glm::distance(sphereCenter, closestPoint) <= (2*s))
+        {
+            node.selected = YES;
+        }
+        else
+        {
+            node.selected = NO;
+        }
+    }
+    
     glTranslatef(x, y, z);
+
+    if (node.selected)
+    {
+        glColor3f(1, 1, 0);
+        glRasterPos2f(x, y);
+        [self glPrint:node.identifier];
+    }
 
     // x, y, z represent the vector along which the rotation occurs, in our case, the y axis
     glRotatef(rotation, 0, 1, 0);
 
     // Scale the node (nominally at size 1,1,1) to the size we need
     glScalef(s, s, s);
-    
+
     glCallList(_displayListNode);
 
     if (node)

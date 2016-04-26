@@ -27,6 +27,8 @@
         _radius = (float)orbital;
         _rotation = 0.0f;
         _identifier = [identifier copy];
+        _selected = NO;
+        _numericIdentifer = 0;
         
         NSLog(@"Node[%@]: Initialised with orbital: %lu, radius: %.2f", identifier, (unsigned long)_orbital, _radius);
     }

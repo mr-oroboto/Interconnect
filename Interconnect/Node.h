@@ -11,11 +11,13 @@
 @interface Node : NSObject
 
 @property (nonatomic, readonly) NSString* identifier;
+@property (nonatomic) int numericIdentifer;
 @property (nonatomic) NSUInteger orbital;
 @property (nonatomic) float radius;
 @property (nonatomic) float targetVolume;
 @property (nonatomic) float volume;
 @property (nonatomic) float rotation;
+@property (nonatomic) BOOL selected;
 
 + (instancetype)createInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;
 - (instancetype)initInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;

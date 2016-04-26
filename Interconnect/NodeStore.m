@@ -12,7 +12,7 @@
 @interface NodeStore ()
 
 @property (nonatomic, strong) NSMutableDictionary* orbitals;
-@property (nonatomic, strong) NSMutableDictionary* nodes;
+@property (nonatomic, strong) NSMutableDictionary* nodesByIdentifier;
 @property (nonatomic, strong) NSLock* lock;
 
 @end
@@ -26,7 +26,7 @@
     if (self = [super init])
     {
         _orbitals = [[NSMutableDictionary alloc] init];
-        _nodes = [[NSMutableDictionary alloc] init];
+        _nodesByIdentifier = [[NSMutableDictionary alloc] init];
         _lock = [[NSLock alloc] init];
     }
     
@@ -56,7 +56,7 @@
         return;
     }
     
-    self.nodes[node.identifier] = node;
+    self.nodesByIdentifier[node.identifier] = node;
 
     // Do we already have nodes in this orbital?
     NSNumber* orbitalName = [NSNumber numberWithUnsignedInteger:node.orbital];
@@ -103,7 +103,7 @@
 
 - (Node*)node:(NSString*)identifier
 {
-    return self.nodes[identifier];
+    return self.nodesByIdentifier[identifier];
 }
 
 - (NSDictionary*)inhabitedOrbitals
