@@ -11,7 +11,6 @@
 @interface Node : NSObject
 
 @property (nonatomic, readonly) NSString* identifier;
-@property (nonatomic) int numericIdentifer;
 @property (nonatomic) NSUInteger orbital;
 @property (nonatomic) float radius;
 @property (nonatomic) float targetVolume;
