@@ -14,6 +14,9 @@
 #import <arpa/inet.h>
 #import <net/if.h>
 #import <sys/ioctl.h>
+#import "ICMPEchoProbe.h"
+
+#define kLogTraffic NO
 
 @interface CaptureWorker ()
 
@@ -22,6 +25,7 @@
 @property (nonatomic) dispatch_queue_t captureQueue;
 @property (nonatomic) bpf_u_int32 interfaceAddress;         // IPv4 address of capture interface
 @property (nonatomic) bpf_u_int32 interfaceMask;            // IPv4 netmask of capture interface
+@property (nonatomic) NSUInteger probesSent;
 
 @end
 
@@ -33,6 +37,7 @@
     {
         _workerRunning = NO;
         _stopWorker = NO;
+        _probesSent = 0;
         
         // Create a serial dispatch queue, we'll only ever queue up one task on it.
         _captureQueue = dispatch_queue_create("net.oroboto.Interconnect.CaptureWorker", NULL);
@@ -181,11 +186,17 @@
         unsigned char* payload = (unsigned char*)(packet + ETHER_HEADER_LEN + ip_hdr_len + tcp_hdr_len);
         unsigned int payload_len = ntohs(ip_hdr->ip_len) - ip_hdr_len - tcp_hdr_len;
         
-        NSLog(@"%@ -> %@: TCP srcPort[%d] -> dstPort[%d] of %d bytes", srcHost, dstHost, ntohs(tcp_hdr->tcp_sport), ntohs(tcp_hdr->tcp_dport), payload_len);
+        if (kLogTraffic)
+        {
+            NSLog(@"%@ -> %@: TCP srcPort[%d] -> dstPort[%d] of %d bytes", srcHost, dstHost, ntohs(tcp_hdr->tcp_sport), ntohs(tcp_hdr->tcp_dport), payload_len);
+        }
     }
     else if (ip_hdr->ip_proto == IPPROTO_UDP)
     {
-        NSLog(@"%@ -> %@: UDP", srcHost, dstHost);
+        if (kLogTraffic)
+        {
+            NSLog(@"%@ -> %@: UDP", srcHost, dstHost);
+        }
     }
     else if (ip_hdr->ip_proto == IPPROTO_ICMP)
     {
@@ -199,12 +210,12 @@
     if (ip_hdr->ip_saddr.s_addr == _interfaceAddress)
     {
         // traffic from us to them
-        [self updateNode:dstHost withHopCount:2 /* todo */ addBytesToUs:0 addBytesFromUs:transferBytes];
+        [self updateNode:dstHost addBytesToUs:0 addBytesFromUs:transferBytes];
     }
     else if (ip_hdr->ip_daddr.s_addr == _interfaceAddress)
     {
         // traffic from them to us
-        [self updateNode:srcHost withHopCount:2 /* todo */ addBytesToUs:transferBytes addBytesFromUs:0];
+        [self updateNode:srcHost addBytesToUs:transferBytes addBytesFromUs:0];
     }
 }
 
@@ -231,9 +242,39 @@
     return NO;
 }
 
-- (void)updateNode:(NSString*)nodeIdentifer withHopCount:(NSUInteger)hopCount addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs
+- (void)updateNode:(NSString*)nodeIdentifer addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs
 {
-    [[HostStore sharedStore] updateHost:nodeIdentifer withHopCount:hopCount addBytesIn:bytesFromUs addBytesOut:bytesToUs];
+    if ([[HostStore sharedStore] updateHostBytesTransferred:nodeIdentifer addBytesIn:bytesFromUs addBytesOut:bytesToUs])
+    {
+        if (++_probesSent > 5)
+        {
+            return;
+        }
+
+        // First time we've seen this host, send off a probe to work out what its orbital should be.
+        dispatch_queue_t defaultConcurrentQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+        
+        dispatch_async(defaultConcurrentQueue, ^{
+            NSLog(@"Sending ICMP echo request to new host %@", nodeIdentifer);
+
+            ICMPEchoProbe* probe = [ICMPEchoProbe probeWithHostnameOrIPAddress:nodeIdentifer];
+            float rttToHost = [probe measureAverageRTT];
+            
+            if (rttToHost > 0)
+            {
+                NSUInteger hostGroup = (rttToHost / 10.0) + 1;      // 10ms bands
+                
+                dispatch_async(_captureQueue, ^{
+                    NSLog(@"Updating host %@ group to %lu based on RTT of %.2fms", nodeIdentifer, hostGroup, rttToHost);
+                    [[HostStore sharedStore] updateHost:nodeIdentifer withGroup:hostGroup];
+                });
+            }
+            else
+            {
+                NSLog(@"Failed to get average RTT to %@", nodeIdentifer);
+            }
+        });
+    }
 }
 
 @end

@@ -16,6 +16,7 @@
 		602A9FCD1CC1AC1A0051CFEF /* NodeStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCC1CC1AC1A0051CFEF /* NodeStore.m */; };
 		602A9FD01CC1AC250051CFEF /* Node.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCF1CC1AC250051CFEF /* Node.m */; };
 		602A9FD31CC1AC360051CFEF /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FD21CC1AC360051CFEF /* Host.m */; };
+		6040C9721CD2C22400484468 /* ICMPEchoProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = 6040C9711CD2C22400484468 /* ICMPEchoProbe.m */; };
 		606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 606FFB171CC6DE1800A1CF70 /* HostStore.m */; };
 		6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */ = {isa = PBXBuildFile; fileRef = 6085D1F41CC30539001D9820 /* CaptureWorker.m */; };
 		60CF9C891CC8C01D00E28888 /* NSFont_OpenGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 60CF9C881CC8C01D00E28888 /* NSFont_OpenGL.m */; };
@@ -149,6 +150,8 @@
 		602A9FCF1CC1AC250051CFEF /* Node.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Node.m; sourceTree = "<group>"; };
 		602A9FD11CC1AC360051CFEF /* Host.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Host.h; sourceTree = "<group>"; };
 		602A9FD21CC1AC360051CFEF /* Host.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Host.m; sourceTree = "<group>"; };
+		6040C9701CD2C22400484468 /* ICMPEchoProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ICMPEchoProbe.h; sourceTree = "<group>"; };
+		6040C9711CD2C22400484468 /* ICMPEchoProbe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICMPEchoProbe.m; sourceTree = "<group>"; };
 		606FFB161CC6DE1800A1CF70 /* HostStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HostStore.h; sourceTree = "<group>"; };
 		606FFB171CC6DE1800A1CF70 /* HostStore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HostStore.m; sourceTree = "<group>"; };
 		6085D1F31CC30539001D9820 /* CaptureWorker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CaptureWorker.h; sourceTree = "<group>"; };
@@ -445,6 +448,7 @@
 		600333531CBA0673007BA868 /* Interconnect */ = {
 			isa = PBXGroup;
 			children = (
+				6040C96F1CD2C21200484468 /* Probes */,
 				60ECFD651CCD8471006420D4 /* glm */,
 				6003336A1CBA06BC007BA868 /* Views */,
 				6085D1F61CC30541001D9820 /* Capture */,
@@ -491,6 +495,15 @@
 				602A9FD21CC1AC360051CFEF /* Host.m */,
 			);
 			name = Model;
+			sourceTree = "<group>";
+		};
+		6040C96F1CD2C21200484468 /* Probes */ = {
+			isa = PBXGroup;
+			children = (
+				6040C9701CD2C22400484468 /* ICMPEchoProbe.h */,
+				6040C9711CD2C22400484468 /* ICMPEchoProbe.m */,
+			);
+			name = Probes;
 			sourceTree = "<group>";
 		};
 		6085D1F61CC30541001D9820 /* Capture */ = {
@@ -970,6 +983,7 @@
 				602A9FCD1CC1AC1A0051CFEF /* NodeStore.m in Sources */,
 				600333691CBA06B8007BA868 /* OpenGLView.mm in Sources */,
 				600333561CBA0673007BA868 /* AppDelegate.m in Sources */,
+				6040C9721CD2C22400484468 /* ICMPEchoProbe.m in Sources */,
 				60ECFE711CCD8471006420D4 /* glm.cpp in Sources */,
 				602A9FD31CC1AC360051CFEF /* Host.m in Sources */,
 				6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */,

@@ -22,7 +22,7 @@
 {
     CaptureWorker* worker = [[CaptureWorker alloc] init];
 //  [self createSampleData];
-    [worker startCapture];    
+    [worker startCapture];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
@@ -48,7 +48,7 @@
             if (j == 128)
             {
                 [host setTargetVolume:0.5];
-                [hostStore updateHost:host.identifier withHopCount:8];
+                [hostStore updateHost:host.identifier withGroup:8];
             }
         }
     }
@@ -59,7 +59,7 @@
 
 - (void)sampleOrbitalChange
 {
-    [[HostStore sharedStore] updateHost:@"1.128" withHopCount:5];
+    [[HostStore sharedStore] updateHost:@"1.128" withGroup:5];
 }
 
 @end

@@ -12,6 +12,7 @@
 #import <time.h>
 #import "HostStore.h"
 #import "Node.h"
+#import "Host.h"
 #import "NSFont_OpenGL.h"
 #import "glm/vec3.hpp"
 #import "glm/gtc/matrix_transform.hpp"
@@ -41,6 +42,9 @@
 @property (nonatomic) GLfloat worldRotateX;
 @property (nonatomic) NSPoint trackingMousePosition;
 @property (nonatomic) BOOL picking;
+@property (nonatomic) Host* previousSelection;
+@property (nonatomic) NSUInteger lastNodeCount;
+@property (nonatomic) double fps;
 
 @property (nonatomic) GLuint displayListNode;           // display list for node objects
 @property (nonatomic) GLuint displayListFontBase;       // base pointer to display lists for font set
@@ -349,11 +353,12 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 {
     double nominalRefreshRate = outputTime->videoTimeScale / outputTime->videoRefreshPeriod;    // fps
     double elapsed_seconds = (actualTime->hostTime - _lastTicks) / CVGetHostClockFrequency();   // should we use outputTime->hostTime?
-    double fps = 1 / elapsed_seconds;
+
+    _fps = 1 / elapsed_seconds;
 
     if (kEnableFPSLog)
     {
-        NSLog(@"getFrameForTime (nominal refresh rate: %.2f FPS, actual FPS: %.2f)", nominalRefreshRate, fps);
+        NSLog(@"getFrameForTime (nominal refresh rate: %.2f FPS, actual FPS: %.2f)", nominalRefreshRate, _fps);
     }
     
     // The rendering context connects OpenGL to Cocoa's view and stores all OpenGL state
@@ -384,6 +389,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     }
 
     [self drawNodeSphere:elapsed_seconds];
+    [self drawHUD];
     
     [[self openGLContext] flushBuffer];
     
@@ -435,6 +441,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     [hostStore lockStore];
     NSDictionary* orbitals = [hostStore inhabitedOrbitals];
     NSUInteger orbitalCount = [[orbitals allKeys] count];
+    
+    _previousSelection = nil;
+    _lastNodeCount = 0;
 
     for (NSNumber* orbitalNumber in orbitals)
     {
@@ -442,6 +451,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         NSUInteger nodeCount = [nodes count];
         float planeCount = floor(sqrt((double)nodeCount) + 1);
         float degreeSpacing = 360.0f / planeCount;
+
+        _lastNodeCount += nodeCount;
         
 //      NSLog(@"Orbital %d with %lu nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], (unsigned long)nodeCount, planeCount, degreeSpacing);
         
@@ -449,7 +460,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         float thetaOffset = [orbitalNumber intValue] * 30.0;
         for (float theta = thetaOffset; theta < (thetaOffset + 360.0f); theta += degreeSpacing)
         {
-            for (float phi = 0; phi < 360.0; phi += degreeSpacing)
+            for (float phi = 10; phi < 370.0; phi += degreeSpacing)
             {
                 if (nodesDrawn < nodeCount)
                 {
@@ -514,7 +525,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     
     glRotatef(worldRotateY, 0.0f, 1.0f, 0.0);       // rotation around Y-axis (looking left and right)
     glRotatef(worldRotateX, 1.0f, 0.0f, 0.0);       // rotation around Y-axis (looking left and right)
-    
+
     if (_picking)
     {
         GLint viewport[4];
@@ -548,7 +559,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         float t = glm::dot(vectDirToSphere, vectRayDir);
         glm::vec3 closestPoint = rayVectorNear + (vectRayDir*t);
         
-        if (glm::distance(sphereCenter, closestPoint) <= (2*s))
+        if (glm::distance(sphereCenter, closestPoint) <= s)
         {
             node.selected = YES;
         }
@@ -558,13 +569,22 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         }
     }
 
-    if (node.selected)
+    if (node && node.selected)
     {
+        Host* host = (Host*)node;
         glColor3f(1, 1, 0);
-        glRasterPos2f(x, y);
-        [self glPrint:node.identifier];
+        glRasterPos3f(x+s, y+s, z);
+        [self glPrint:[NSString stringWithFormat:@"%@ [in: %lu] [out: %lu]", host.ipAddress, host.bytesReceived, host.bytesSent]];
+        
+        if (_previousSelection != nil)
+        {
+            // This is simply debugging used to detect multiple selection (ie. ray passed through > 1 node)
+            NSLog(@"Selected %@ (%.2f, %.2f, %.2f) but %@ already selected", node.identifier, x, y, z, _previousSelection.identifier);
+        }
+        
+        _previousSelection = node;
     }
-
+    
     glTranslatef(x, y, z);
 
     // Scale the node (nominally at size 1,1,1) to the size we need
@@ -586,6 +606,32 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     gluSphere(_quadric, radius, 32, 32);
     
     glEndList();
+}
+
+- (void)drawHUD
+{
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // left, right, bottom, top, z
+    glOrtho(0, viewport[2], viewport[3], 0, -1.0, 1.0);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glColor3f(0, 0, 1);
+    glRasterPos3f(10, 30, 0);
+    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@]", _lastNodeCount, _fps, _isWorldRotating ? @"world" : @"camera"]];
+    glPopMatrix();
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+
+    glMatrixMode(GL_MODELVIEW);
 }
 
 @end

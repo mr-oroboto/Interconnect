@@ -53,13 +53,13 @@
 
 #pragma mark - Host Management
 
-- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount addBytesIn:(NSUInteger)bytesIn addBytesOut:(NSUInteger)bytesOut
+- (BOOL)updateHostBytesTransferred:(NSString*)identifier addBytesIn:(NSUInteger)bytesIn addBytesOut:(NSUInteger)bytesOut
 {
+    BOOL hostCreated = NO;
+    
     [self lockStore];
 
     Host* host = (Host*)[self node:identifier];
-    
-    // @todo: deal with hop count changes
     
     /**
      * A volume of kMaxVolume is reserved for the host(s) that have transferred the largest number of bytes,
@@ -75,10 +75,11 @@
 
     if ( ! host)
     {
-        // All nodes will grow from 0.01 to their initial volume size anyway
-        host = [Host createInOrbital:hopCount withIdentifier:identifier andVolume:0.01];
+        // All nodes will grow from 0.01 to their initial volume size and start off in the first orbital
+        host = [Host createInOrbital:1 withIdentifier:identifier andVolume:0.01];
         host.ipAddress = identifier;
-        [self addNode:host];        
+        [self addNode:host];
+        hostCreated = YES;
     }
     
     NSUInteger totalBytesTransferredByNode = [host bytesTransferred] + bytesIn + bytesOut;
@@ -105,9 +106,16 @@
     [host setTargetVolume:volume];
     
     [self unlockStore];
+    
+    return hostCreated;
 }
 
-- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount
+/**
+ * Hosts can be grouped based on common attributes (ie. their hop count from us, the average RTT to them, their AS etc).
+ *
+ * Host groups are implemented as orbitals, hosts in the same group appear in the same orbital.
+ */
+- (void)updateHost:(NSString*)identifier withGroup:(NSUInteger)group
 {
     [self lockStore];
 
@@ -115,7 +123,7 @@
 
     if (host)
     {
-        [super updateNode:host withOrbital:hopCount];
+        [super updateNode:host withOrbital:group];
     }
     
     [self unlockStore];
