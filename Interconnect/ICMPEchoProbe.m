@@ -19,8 +19,8 @@
 #import <sys/time.h>
 
 #define kICMPEchoProbePayloadBytes 56
-#define kICMPEchoProbeTimeoutSecs  5
-#define kICMPEchoProbeNumberEchos  3
+#define kICMPEchoProbeTimeoutSecs  1
+#define kICMPEchoProbeNumberEchos  1
 
 @interface ICMPEchoProbe ()
 
@@ -59,6 +59,18 @@
         self.lastError = kICMPEchoProbeErrorNoSocket;
         return -1;
     }
+
+    struct sockaddr_in dstAddr;
+    memset(&dstAddr, 0, sizeof(dstAddr));
+    dstAddr.sin_family = AF_INET;
+    dstAddr.sin_addr.s_addr = inet_addr([self.ipAddress cString]);
+
+    if (connect(self.socket, (const struct sockaddr*)&dstAddr, sizeof(dstAddr)) < 0)
+    {
+        NSLog(@"Could not set destination address to limit received packets");
+        self.lastError = kICMPEchoProbeErrorNoSocket;
+        return -1;
+    }
     
     float msElapsedTotal = 0;
     for (int i = 0; i < kICMPEchoProbeNumberEchos; i++)
@@ -66,19 +78,30 @@
         float msElapsed = [self ping];
         if (msElapsed < 0)
         {
-            return -1;
+            msElapsedTotal = -1;
+            break;
         }
         
         msElapsedTotal += msElapsed;
     }
     
-    return msElapsedTotal / kICMPEchoProbeNumberEchos;
+    close(self.socket);
+
+    NSLog(@"Total RTT for %@: %.2f", self.ipAddress, msElapsedTotal);
+    
+    if (msElapsedTotal >= 0)
+    {
+        return msElapsedTotal / kICMPEchoProbeNumberEchos;
+    }
+    
+    return msElapsedTotal;
 }
 
 - (float)ping
 {
     struct icmp* icmpSendHdr;
     uint16_t sentSequenceNumber = self.sequenceNumber;
+    uint16_t identifier = self.identifier;
     
     // Create ICMP packet (header + payload, 56 byte payload is standard)
     NSData* payload = [[NSString stringWithFormat:@"%32zd echoes in an empty room", sentSequenceNumber] dataUsingEncoding:NSASCIIStringEncoding];
@@ -96,7 +119,7 @@
     icmpSendHdr->icmp_type = ICMP_ECHO;
     icmpSendHdr->icmp_code = 0;
     icmpSendHdr->icmp_cksum = 0;      // must be 0 for checksum calculation to work correctly
-    icmpSendHdr->icmp_hun.ih_idseq.icd_id = htons(self.identifier);
+    icmpSendHdr->icmp_hun.ih_idseq.icd_id = htons(identifier);
     icmpSendHdr->icmp_hun.ih_idseq.icd_seq = htons(sentSequenceNumber);
     memcpy(&icmpSendHdr[1], [payload bytes], [payload length]);
     
@@ -107,11 +130,6 @@
     icmpSendHdr->icmp_cksum = [self icmpChecksum:(unsigned char*)[packet bytes] length:[packet length]];
 
     // Send it
-    struct sockaddr_in dstAddr;
-    memset(&dstAddr, 0, sizeof(dstAddr));
-    dstAddr.sin_family = AF_INET;
-    dstAddr.sin_addr.s_addr = inet_addr([self.ipAddress cString]);
-    
     struct timeval timeSent, timeRecv;
     
     if (gettimeofday(&timeSent, NULL))
@@ -121,7 +139,7 @@
         return -1;
     }
 
-    ssize_t bytesSent = sendto(self.socket, [packet bytes], [packet length], 0, (struct sockaddr*)&dstAddr, sizeof(dstAddr));
+    ssize_t bytesSent = send(self.socket, [packet bytes], [packet length], 0);
     if (bytesSent < [packet length])
     {
         NSLog(@"Failed while sending ICMP echo request (%lu bytes sent)", bytesSent);
@@ -129,7 +147,7 @@
         return -1;
     }
     
-    NSLog(@"Sent ICMP echo request with ID %u (seq: %u) to %@", self.identifier, sentSequenceNumber, self.ipAddress);
+    NSLog(@"Sent ICMP echo request with ID %u (seq: %u) to %@ on thread %@ (self: %@)", identifier, sentSequenceNumber, self.ipAddress, [NSThread currentThread], self);
     
     // Block (up to n seconds) and wait for response
     fd_set readSet;
@@ -219,9 +237,9 @@
         return -1;
     }
     
-    if (ntohs(icmpRecvHdr->icmp_hun.ih_idseq.icd_id) != self.identifier)
+    if (ntohs(icmpRecvHdr->icmp_hun.ih_idseq.icd_id) != identifier)
     {
-        NSLog(@"Received ICMP packet had incorrect identifier %u (needed %u)", ntohs(icmpRecvHdr->icmp_hun.ih_idseq.icd_id), self.identifier);
+        NSLog(@"Received ICMP packet from %s had incorrect identifier %u (needed %u) on thread %@ (self: %@)", inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr), ntohs(icmpRecvHdr->icmp_hun.ih_idseq.icd_id), identifier, [NSThread currentThread], self);
         self.lastError = kICMPEchoProbeErrorPacket;
         return -1;
     }

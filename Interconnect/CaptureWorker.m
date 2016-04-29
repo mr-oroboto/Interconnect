@@ -23,6 +23,7 @@
 @property (nonatomic) BOOL stopWorker;                      // set from main, read from worker
 @property (nonatomic) BOOL workerRunning;                   // set from worker, read from main
 @property (nonatomic) dispatch_queue_t captureQueue;
+@property (nonatomic) dispatch_queue_t probeQueue;
 @property (nonatomic) bpf_u_int32 interfaceAddress;         // IPv4 address of capture interface
 @property (nonatomic) bpf_u_int32 interfaceMask;            // IPv4 netmask of capture interface
 @property (nonatomic) NSUInteger probesSent;
@@ -41,6 +42,7 @@
         
         // Create a serial dispatch queue, we'll only ever queue up one task on it.
         _captureQueue = dispatch_queue_create("net.oroboto.Interconnect.CaptureWorker", NULL);
+        _probeQueue = dispatch_queue_create("net.oroboto.Interconnect.Probes", NULL);
 
         // Ensure our header definitions will work
         if (sizeof(unsigned short) != 2)
@@ -246,28 +248,24 @@
 {
     if ([[HostStore sharedStore] updateHostBytesTransferred:nodeIdentifer addBytesIn:bytesFromUs addBytesOut:bytesToUs])
     {
-        if (++_probesSent > 5)
-        {
-            return;
-        }
-
-        // First time we've seen this host, send off a probe to work out what its orbital should be.
-        dispatch_queue_t defaultConcurrentQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+        _probesSent++;
         
-        dispatch_async(defaultConcurrentQueue, ^{
-            NSLog(@"Sending ICMP echo request to new host %@", nodeIdentifer);
-
+        // First time we've seen this host, send off a probe to work out what its orbital should be.
+        dispatch_async(_probeQueue, ^{
             ICMPEchoProbe* probe = [ICMPEchoProbe probeWithHostnameOrIPAddress:nodeIdentifer];
             float rttToHost = [probe measureAverageRTT];
             
             if (rttToHost > 0)
             {
-                NSUInteger hostGroup = (rttToHost / 10.0) + 1;      // 10ms bands
+                NSUInteger hostGroup = (rttToHost / 50.0) + 1;      // 50ms bands
                 
-                dispatch_async(_captureQueue, ^{
-                    NSLog(@"Updating host %@ group to %lu based on RTT of %.2fms", nodeIdentifer, hostGroup, rttToHost);
-                    [[HostStore sharedStore] updateHost:nodeIdentifer withGroup:hostGroup];
-                });
+                if (hostGroup > 12)
+                {
+                    hostGroup = 12;
+                }
+                
+                NSLog(@"Updating host %@ group to %lu based on RTT of %.2fms", nodeIdentifer, hostGroup, rttToHost);
+                [[HostStore sharedStore] updateHost:nodeIdentifer withGroup:hostGroup];
             }
             else
             {

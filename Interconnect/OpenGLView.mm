@@ -21,7 +21,7 @@
 #define kEnableVerticalSync NO
 #define kEnablePerspective YES
 #define kEnableFPSLog NO
-#define kNodeRadiusGrowthPerSecond 0.4
+#define kNodeRadiusGrowthPerSecond 0.7
 #define kNodeVolumeGrowthPerSecond 0.01
 #define kDisplayListCountForText 95
 #define kCameraInitialX 0
@@ -472,7 +472,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     GLfloat y = radius * sin(phi * (2*M_PI / 360.0)) * sin(theta * (2*M_PI / 360.0));
                     GLfloat z = radius * cos(phi * (2*M_PI / 360.0));
 
-                    glColor3f(0, 0, (1.0 / orbitalCount) * [orbitalNumber floatValue]);
+                    glColor3f((1.0 / orbitalCount) * [orbitalNumber floatValue], 0, 0);
 
                     [self drawNode:node x:x y:y z:z secondsSinceLastFrame:secondsSinceLastFrame];
                     
