@@ -21,7 +21,7 @@
 
 @property (nonatomic) NSUInteger lastError;
 
-+ (ICMPEchoProbe*)probeWithHostnameOrIPAddress:(NSString*)host;
++ (ICMPEchoProbe*)probeWithIPAddress:(NSString*)ipAddress;
 - (float)measureAverageRTT;
 
 @end

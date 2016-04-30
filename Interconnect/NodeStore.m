@@ -67,7 +67,6 @@
     }
     else
     {
-        NSLog(@"Creating new orbital: %@", orbitalName);
         self.orbitals[orbitalName] = [[NSMutableArray alloc] initWithObjects:node, nil];
     }
 }

@@ -10,9 +10,9 @@
 
 @implementation Host
 
-+ (instancetype)createInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume
++ (instancetype)createInGroup:(NSUInteger)group withIdentifier:(NSString*)identifier andVolume:(float)volume
 {
-    return [[Host alloc] initInOrbital:orbital withIdentifier:identifier andVolume:volume];
+    return [[Host alloc] initInOrbital:group withIdentifier:identifier andVolume:volume];
 }
 
 - (instancetype)init

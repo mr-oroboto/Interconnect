@@ -29,7 +29,7 @@
         _identifier = [identifier copy];
         _selected = NO;
         
-        NSLog(@"Node[%@]: Initialised with orbital: %lu, radius: %.2f", identifier, (unsigned long)_orbital, _radius);
+//      NSLog(@"Node[%@]: Initialised with orbital: %lu, radius: %.2f", identifier, (unsigned long)_orbital, _radius);
     }
     
     return self;

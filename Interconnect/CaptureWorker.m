@@ -14,19 +14,22 @@
 #import <arpa/inet.h>
 #import <net/if.h>
 #import <sys/ioctl.h>
+#import <netdb.h>
 #import "ICMPEchoProbe.h"
 
 #define kLogTraffic NO
+#define kMaxConcurrentResolutionTasks   5
 
 @interface CaptureWorker ()
 
 @property (nonatomic) BOOL stopWorker;                      // set from main, read from worker
 @property (nonatomic) BOOL workerRunning;                   // set from worker, read from main
 @property (nonatomic) dispatch_queue_t captureQueue;
-@property (nonatomic) dispatch_queue_t probeQueue;
+@property (nonatomic) dispatch_queue_t probeQueue;          // serialise probes
+@property (nonatomic) NSOperationQueue* resolverQueue;      // allows multiple concurrent resolutions
 @property (nonatomic) bpf_u_int32 interfaceAddress;         // IPv4 address of capture interface
 @property (nonatomic) bpf_u_int32 interfaceMask;            // IPv4 netmask of capture interface
-@property (nonatomic) NSUInteger probesSent;
+@property (nonatomic) NSUInteger probeType;
 
 @end
 
@@ -38,11 +41,13 @@
     {
         _workerRunning = NO;
         _stopWorker = NO;
-        _probesSent = 0;
+        _probeType = kProbeTypeICMPEcho;
         
         // Create a serial dispatch queue, we'll only ever queue up one task on it.
         _captureQueue = dispatch_queue_create("net.oroboto.Interconnect.CaptureWorker", NULL);
         _probeQueue = dispatch_queue_create("net.oroboto.Interconnect.Probes", NULL);
+        _resolverQueue = [[NSOperationQueue alloc] init];
+        [_resolverQueue setMaxConcurrentOperationCount:kMaxConcurrentResolutionTasks];
 
         // Ensure our header definitions will work
         if (sizeof(unsigned short) != 2)
@@ -212,12 +217,12 @@
     if (ip_hdr->ip_saddr.s_addr == _interfaceAddress)
     {
         // traffic from us to them
-        [self updateNode:dstHost addBytesToUs:0 addBytesFromUs:transferBytes];
+        [self updateHost:dstHost addBytesToUs:0 addBytesFromUs:transferBytes];
     }
     else if (ip_hdr->ip_daddr.s_addr == _interfaceAddress)
     {
         // traffic from them to us
-        [self updateNode:srcHost addBytesToUs:transferBytes addBytesFromUs:0];
+        [self updateHost:srcHost addBytesToUs:transferBytes addBytesFromUs:0];
     }
 }
 
@@ -244,35 +249,72 @@
     return NO;
 }
 
-- (void)updateNode:(NSString*)nodeIdentifer addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs
+- (void)updateHost:(NSString*)ipAddress addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs
 {
-    if ([[HostStore sharedStore] updateHostBytesTransferred:nodeIdentifer addBytesIn:bytesFromUs addBytesOut:bytesToUs])
+    if ([[HostStore sharedStore] updateHostBytesTransferred:ipAddress addBytesIn:bytesFromUs addBytesOut:bytesToUs])
     {
-        _probesSent++;
-        
-        // First time we've seen this host, send off a probe to work out what its orbital should be.
-        dispatch_async(_probeQueue, ^{
-            ICMPEchoProbe* probe = [ICMPEchoProbe probeWithHostnameOrIPAddress:nodeIdentifer];
-            float rttToHost = [probe measureAverageRTT];
-            
-            if (rttToHost > 0)
-            {
-                NSUInteger hostGroup = (rttToHost / 50.0) + 1;      // 50ms bands
+        // First time we've seen this host, resolve its name and send off a probe to work out what its orbital should be.
+        NSInvocationOperation* resolverOperation = [[NSInvocationOperation alloc] initWithTarget:self selector:@selector(resolveNameForAddress:) object:ipAddress];
+        [self.resolverQueue addOperation:resolverOperation];
+
+        if (_probeType == kProbeTypeICMPEcho)
+        {
+            // Using a "connected" SOCK_DGRAM for ICMP echos does not demultiplex ICMP echo responses from different
+            // hosts to the "right" socket. Until the ICMP echo probe is implemented as a single thread that consumes
+            // multiple probe requests at once (and resolves them out of order) the ICMP echo task must be serialised.
+            dispatch_async(_probeQueue, ^{
+                ICMPEchoProbe* probe = [ICMPEchoProbe probeWithIPAddress:ipAddress];
+                float rttToHost = [probe measureAverageRTT];
                 
-                if (hostGroup > 12)
+                if (rttToHost > 0)
                 {
-                    hostGroup = 12;
+                    NSUInteger hostGroup = (rttToHost / 50.0) + 1;      // 50ms bands
+                    
+                    if (hostGroup > 12)
+                    {
+                        hostGroup = 12;
+                    }
+                    
+                    NSLog(@"Updating host %@ group to %lu based on RTT of %.2fms", ipAddress, hostGroup, rttToHost);
+                    [[HostStore sharedStore] updateHost:ipAddress withGroup:hostGroup];
                 }
-                
-                NSLog(@"Updating host %@ group to %lu based on RTT of %.2fms", nodeIdentifer, hostGroup, rttToHost);
-                [[HostStore sharedStore] updateHost:nodeIdentifer withGroup:hostGroup];
-            }
-            else
-            {
-                NSLog(@"Failed to get average RTT to %@", nodeIdentifer);
-            }
-        });
+                else
+                {
+                    NSLog(@"Failed to get average RTT to %@", ipAddress);
+                }
+            });
+        }
     }
+}
+
+#pragma mark - Name Resolution
+
+- (void)resolveNameForAddress:(NSString*)ipAddress
+{
+    struct in_addr sin_addr;
+    
+    if ( ! inet_aton([ipAddress cStringUsingEncoding:NSASCIIStringEncoding], &sin_addr))
+    {
+        NSLog(@"Could not convert IP address [%@]", ipAddress);
+        return;
+    }
+
+    char hostname[NI_MAXHOST];
+    struct sockaddr_in saddr;
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin_addr = sin_addr;
+    saddr.sin_family = AF_INET;
+    saddr.sin_len = sizeof(saddr);
+    
+    if (getnameinfo((const struct sockaddr*)&saddr, saddr.sin_len, hostname, sizeof(hostname), NULL, 0, NI_NOFQDN | NI_NAMEREQD) != 0)
+    {
+        NSLog(@"Could not resolve IP address [%@]", ipAddress);
+        return;
+    }
+
+    NSString* resolvedName = [NSString stringWithFormat:@"%s", hostname];
+    NSLog(@"Resolved [%@] to [%@]", ipAddress, resolvedName);
+    [[HostStore sharedStore] updateHost:ipAddress withName:resolvedName];
 }
 
 @end

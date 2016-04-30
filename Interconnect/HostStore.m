@@ -76,7 +76,7 @@
     if ( ! host)
     {
         // All nodes will grow from 0.01 to their initial volume size and start off in the first orbital
-        host = [Host createInOrbital:1 withIdentifier:identifier andVolume:0.01];
+        host = [Host createInGroup:1 withIdentifier:identifier andVolume:0.01];
         host.ipAddress = identifier;
         [self addNode:host];
         hostCreated = YES;
@@ -120,10 +120,22 @@
     [self lockStore];
 
     Host* host = (Host*)[self node:identifier];
-
     if (host)
     {
         [super updateNode:host withOrbital:group];
+    }
+    
+    [self unlockStore];
+}
+
+- (void)updateHost:(NSString*)identifier withName:(NSString*)name
+{
+    [self lockStore];
+    
+    Host* host = (Host*)[self node:identifier];
+    if (host)
+    {
+        [host setHostname:name];
     }
     
     [self unlockStore];

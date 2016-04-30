@@ -2,6 +2,10 @@
 //  ICMPEchoProbe.m
 //  Interconnect
 //
+//  NOTE: Using a "connected" SOCK_DGRAM for ICMP echos does not demultiplex ICMP echo responses from different
+//        hosts to the "right" socket. Until the ICMP echo probe is implemented as a single thread that consumes
+//        multiple probe requests at once (and resolves them out of order) the ICMP echo task must be serialised.
+//
 //  Created by oroboto on 29/04/2016.
 //  Copyright © 2016 oroboto. All rights reserved.
 //
@@ -33,16 +37,16 @@
 
 @implementation ICMPEchoProbe
 
-+ (ICMPEchoProbe*)probeWithHostnameOrIPAddress:(NSString*)host
++ (ICMPEchoProbe*)probeWithIPAddress:(NSString*)ipAddress
 {
-    return [[ICMPEchoProbe alloc] initWithHostnameOrIPAddress:host];
+    return [[ICMPEchoProbe alloc] initWithIPAddress:ipAddress];
 }
 
-- (instancetype)initWithHostnameOrIPAddress:(NSString*)host
+- (instancetype)initWithIPAddress:(NSString*)ipAddress
 {
     if (self = [super init])
     {
-        self.ipAddress  = host;          // @todo: name resolution of non-IP host parameter
+        self.ipAddress  = ipAddress;
         self.lastError  = kICMPEchoProbeErrorNone;
         self.identifier = arc4random();  // identifies this ICMP echo request amongst others to the destination
         self.sequenceNumber = 0;
@@ -63,7 +67,7 @@
     struct sockaddr_in dstAddr;
     memset(&dstAddr, 0, sizeof(dstAddr));
     dstAddr.sin_family = AF_INET;
-    dstAddr.sin_addr.s_addr = inet_addr([self.ipAddress cString]);
+    dstAddr.sin_addr.s_addr = inet_addr([self.ipAddress cStringUsingEncoding:NSASCIIStringEncoding]);
 
     if (connect(self.socket, (const struct sockaddr*)&dstAddr, sizeof(dstAddr)) < 0)
     {
@@ -86,8 +90,6 @@
     }
     
     close(self.socket);
-
-    NSLog(@"Total RTT for %@: %.2f", self.ipAddress, msElapsedTotal);
     
     if (msElapsedTotal >= 0)
     {
@@ -147,7 +149,7 @@
         return -1;
     }
     
-    NSLog(@"Sent ICMP echo request with ID %u (seq: %u) to %@ on thread %@ (self: %@)", identifier, sentSequenceNumber, self.ipAddress, [NSThread currentThread], self);
+    NSLog(@"Sent ICMP echo request with ID %u (seq: %u) to %@", identifier, sentSequenceNumber, self.ipAddress);
     
     // Block (up to n seconds) and wait for response
     fd_set readSet;
@@ -239,7 +241,7 @@
     
     if (ntohs(icmpRecvHdr->icmp_hun.ih_idseq.icd_id) != identifier)
     {
-        NSLog(@"Received ICMP packet from %s had incorrect identifier %u (needed %u) on thread %@ (self: %@)", inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr), ntohs(icmpRecvHdr->icmp_hun.ih_idseq.icd_id), identifier, [NSThread currentThread], self);
+        NSLog(@"Received ICMP packet from %s had incorrect identifier %u (needed %u)", inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr), ntohs(icmpRecvHdr->icmp_hun.ih_idseq.icd_id), identifier);
         self.lastError = kICMPEchoProbeErrorPacket;
         return -1;
     }

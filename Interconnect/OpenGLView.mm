@@ -140,8 +140,6 @@
 
 - (void)dealloc
 {
-    NSLog(@"dealloc");
-    
     // Release the display link
     CVDisplayLinkRelease(_displayLink);
     
@@ -574,7 +572,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         Host* host = (Host*)node;
         glColor3f(1, 1, 0);
         glRasterPos3f(x+s, y+s, z);
-        [self glPrint:[NSString stringWithFormat:@"%@ [in: %lu] [out: %lu]", host.ipAddress, host.bytesReceived, host.bytesSent]];
+        [self glPrint:[NSString stringWithFormat:@"%@ [in: %lu] [out: %lu]", host.hostname.length ? host.hostname : host.ipAddress, host.bytesReceived, host.bytesSent]];
         
         if (_previousSelection != nil)
         {
@@ -623,8 +621,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    glColor3f(0, 0, 1);
-    glRasterPos3f(10, 30, 0);
+    glColor3f(1, 1, 1);
+    glRasterPos3f(5, 15, 0);
     [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@]", _lastNodeCount, _fps, _isWorldRotating ? @"world" : @"camera"]];
     glPopMatrix();
 
