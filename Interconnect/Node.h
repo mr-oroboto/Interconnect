@@ -17,6 +17,8 @@
 @property (nonatomic) float volume;
 @property (nonatomic) float rotation;
 @property (nonatomic) BOOL selected;
+@property (nonatomic) float pulseIntensity;
+@property (nonatomic) BOOL pulseBegin;
 
 + (instancetype)createInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;
 - (instancetype)initInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;

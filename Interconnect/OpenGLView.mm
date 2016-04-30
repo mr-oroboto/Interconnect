@@ -22,7 +22,10 @@
 #define kEnablePerspective YES
 #define kEnableFPSLog NO
 #define kNodeRadiusGrowthPerSecond 0.7
-#define kNodeVolumeGrowthPerSecond 0.01
+#define kNodeVolumeGrowthPerSecond 0.08
+#define kNodePulseDeclinePerSecond 0.6                  // @todo: use sin / swing non-linear transition
+#define kNodeMinimumColourIntensity 0.2
+#define kNodeMinimumPulseIntensity 0.4
 #define kDisplayListCountForText 95
 #define kCameraInitialX 0
 #define kCameraInitialZ 8
@@ -88,8 +91,8 @@
 {
     NSLog(@"prepareOpenGL");
     
-    _quadric = gluNewQuadric();
-    gluQuadricNormals(_quadric, GLU_SMOOTH);
+    self.quadric = gluNewQuadric();
+    gluQuadricNormals(self.quadric, GLU_SMOOTH);
     
     [self buildFontDisplayList];
     [self buildNodeDisplayList];
@@ -109,8 +112,8 @@
     
     // Ambient light
     GLfloat lightAmbient[]  = {0.5f, 0.5f, 0.5f, 1.0f};
-    GLfloat lightDiffuse[]  = {1.0f, 1.0f, 1.0f, 1.0f};
-    GLfloat lightPosition[] = {0.0f, 0.0f, 2.0f, 1.0f};     // toward the viewer, in front of objects
+    GLfloat lightDiffuse[]  = {0.5f, 0.5f, 0.5f, 1.0f};
+    GLfloat lightPosition[] = {3.0f, 3.0f, 4.0f, 1.0f};     // toward the viewer, in front of objects
     glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient);
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse);
     glLightfv(GL_LIGHT1, GL_POSITION, lightPosition);
@@ -127,25 +130,25 @@
     CVDisplayLinkCreateWithActiveCGDisplays(&_displayLink);
     
     // Set the renderer output callback
-    CVDisplayLinkSetOutputCallback(_displayLink, &displayLinkCallback, (__bridge void * _Nullable)(self));
+    CVDisplayLinkSetOutputCallback(self.displayLink, &displayLinkCallback, (__bridge void * _Nullable)(self));
     
     // Set the display link for the current renderer
     CGLContextObj cglContext = [[self openGLContext] CGLContextObj];
     CGLPixelFormatObj cglPixelFormat = [[self pixelFormat] CGLPixelFormatObj];
-    CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(_displayLink, cglContext, cglPixelFormat);
+    CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(self.displayLink, cglContext, cglPixelFormat);
     
     // Activate the display link
-    CVDisplayLinkStart(_displayLink);
+    CVDisplayLinkStart(self.displayLink);
 }
 
 - (void)dealloc
 {
     // Release the display link
-    CVDisplayLinkRelease(_displayLink);
+    CVDisplayLinkRelease(self.displayLink);
     
-    glDeleteLists(_displayListFontBase, kDisplayListCountForText);
-    glDeleteLists(_displayListNode, 1);
-    gluDeleteQuadric(_quadric);
+    glDeleteLists(self.displayListFontBase, kDisplayListCountForText);
+    glDeleteLists(self.displayListNode, 1);
+    gluDeleteQuadric(self.quadric);
 }
 
 #pragma mark - Text
@@ -154,10 +157,10 @@
 {
     NSFont *font;
     
-    _displayListFontBase = glGenLists(kDisplayListCountForText);   // storage for 95 textures (one per character)
+    self.displayListFontBase = glGenLists(kDisplayListCountForText);   // storage for 95 textures (one per character)
     font = [NSFont fontWithName:@"Courier-Bold" size:10];
 
-    if ( ! [font makeGLDisplayListsWithFirstCharacter:' ' count:kDisplayListCountForText displayListBase:_displayListFontBase])
+    if ( ! [font makeGLDisplayListsWithFirstCharacter:' ' count:kDisplayListCountForText displayListBase:self.displayListFontBase])
     {
         NSLog(@"Could not create font display list");
     }
@@ -182,7 +185,7 @@
     
     // Rebase the base list pointer so that we can use ASCII character codes to index and find
     // the right display list to draw. 32 == space, the character in our first display list.
-    glListBase(_displayListFontBase - 32);
+    glListBase(self.displayListFontBase - 32);
     uniBuffer = static_cast<unichar*>(calloc([text length], sizeof(unichar)));
     [text getCharacters:uniBuffer];
 
@@ -200,11 +203,11 @@
 {
     if ([[theEvent characters] isEqualToString:@"l"])
     {
-        _isLightOn = ! _isLightOn;
+        self.isLightOn = ! self.isLightOn;
     }
     else if ([[theEvent characters] isEqualToString:@"w"])
     {
-        _isWorldRotating = ! _isWorldRotating;
+        self.isWorldRotating = ! self.isWorldRotating;
     }
     else if ([theEvent modifierFlags] & NSNumericPadKeyMask)
     {
@@ -223,10 +226,10 @@
     //
     //  Z plane gets more negative into the screen, X more negative to the left
     //
-    _translateX -= (GLfloat)sin(_rotateY * kPiOn180) * 0.5f;
-    _translateZ -= (GLfloat)cos(_rotateY * kPiOn180) * 0.5f;
+    self.translateX -= (GLfloat)sin(self.rotateY * kPiOn180) * 0.5f;
+    self.translateZ -= (GLfloat)cos(self.rotateY * kPiOn180) * 0.5f;
 
-    NSLog(@"x: %.2f, z: %.2f", _translateX, _translateZ);
+    NSLog(@"x: %.2f, z: %.2f", self.translateX, self.translateZ);
 }
 
 - (IBAction)moveDown:(id)sender
@@ -236,47 +239,47 @@
     //
     //  Z plane gets more negative into the screen, X more negative to the left
     //
-    _translateX += (GLfloat)sin(_rotateY * kPiOn180) * 0.5f;
-    _translateZ += (GLfloat)cos(_rotateY * kPiOn180) * 0.5f;
+    self.translateX += (GLfloat)sin(self.rotateY * kPiOn180) * 0.5f;
+    self.translateZ += (GLfloat)cos(self.rotateY * kPiOn180) * 0.5f;
     
-    NSLog(@"x: %.2f, z: %.2f", _translateX, _translateZ);
+    NSLog(@"x: %.2f, z: %.2f", self.translateX, self.translateZ);
 }
 
 - (IBAction)moveLeft:(id)sender
 {
-    if (_isWorldRotating)
+    if (self.isWorldRotating)
     {
-        _worldRotateY += 0.5f;
+        self.worldRotateY += 0.5f;
     }
     else
     {
         // Rotate heading / view counter-clockwise (left)
-        _rotateY += 0.5f;   // CCW in degrees
+        self.rotateY += 0.5f;   // CCW in degrees
     }
 }
 
 - (IBAction)moveRight:(id)sender
 {
-    if (_isWorldRotating)
+    if (self.isWorldRotating)
     {
-        _worldRotateY -= 0.5f;
+        self.worldRotateY -= 0.5f;
     }
     else
     {
         // Rotate heading / view counter-clockwise (right)
-        _rotateY -= 0.5f;   // CW in degrees
+        self.rotateY -= 0.5f;   // CW in degrees
     }
 }
 
 - (void)mouseDown:(NSEvent *)theEvent
 {
-    _trackingMousePosition = [self convertPoint:[theEvent locationInWindow] fromView:nil];
-    _picking = YES;
+    self.trackingMousePosition = [self convertPoint:[theEvent locationInWindow] fromView:nil];
+    self.picking = YES;
 }
 
 - (void)mouseUp:(NSEvent*)theEvent
 {
-    _picking = NO;
+    self.picking = NO;
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent
@@ -284,18 +287,18 @@
     NSPoint locationInView = [self convertPoint:[theEvent locationInWindow] fromView:nil];
     
     // Cocoa View puts (0,0) at bottom-left corner of screen
-    CGFloat deltaX = locationInView.x - _trackingMousePosition.x;
-    CGFloat deltaY = locationInView.y - _trackingMousePosition.y;
+    CGFloat deltaX = locationInView.x - self.trackingMousePosition.x;
+    CGFloat deltaY = locationInView.y - self.trackingMousePosition.y;
 
-    if (_isWorldRotating)
+    if (self.isWorldRotating)
     {
-        _worldRotateY -= (deltaX * 0.1f);
-        _worldRotateX -= (deltaY * 0.1f);
+        self.worldRotateY -= (deltaX * 0.1f);
+        self.worldRotateX -= (deltaY * 0.1f);
     }
     else
     {
-        _rotateY -= (deltaX * 0.1f);
-        _rotateX -= (deltaY * 0.1f);
+        self.rotateY -= (deltaX * 0.1f);
+        self.rotateX -= (deltaY * 0.1f);
     }
     
     _trackingMousePosition = locationInView;
@@ -350,9 +353,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (CVReturn)getFrameForTime:(const CVTimeStamp*)outputTime actualTime:(const CVTimeStamp*)actualTime
 {
     double nominalRefreshRate = outputTime->videoTimeScale / outputTime->videoRefreshPeriod;    // fps
-    double elapsed_seconds = (actualTime->hostTime - _lastTicks) / CVGetHostClockFrequency();   // should we use outputTime->hostTime?
+    double elapsed_seconds = (actualTime->hostTime - self.lastTicks) / CVGetHostClockFrequency();   // should we use outputTime->hostTime?
 
-    _fps = 1 / elapsed_seconds;
+    self.fps = 1 / elapsed_seconds;
 
     if (kEnableFPSLog)
     {
@@ -368,7 +371,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glLoadIdentity();                                       // reset ModelView matrix, screen center now 0.0f, 0.0f, 0.0f
     glClearColor(0, 0, 0, 0);
 
-    if (_isLightOn)
+    if (self.isLightOn)
     {
         glEnable(GL_LIGHTING);
     }
@@ -391,7 +394,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     
     [[self openGLContext] flushBuffer];
     
-    _lastTicks = actualTime->hostTime;      // should we use outputTime->hostTime?
+    self.lastTicks = actualTime->hostTime;      // should we use outputTime->hostTime?
 
     return kCVReturnSuccess;
 }
@@ -401,15 +404,18 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (void)translateForCamera
 {
     glLoadIdentity();
-    GLfloat sceneRotateY = 360.0f - _rotateY;
-    GLfloat sceneRotateX = 360.0f - _rotateX;
-    GLfloat sceneTranslateX = -_translateX;
-    GLfloat sceneTranslateZ = -_translateZ;
+    GLfloat sceneRotateY = 360.0f - self.rotateY;
+    GLfloat sceneRotateX = 360.0f - self.rotateX;
+    GLfloat sceneTranslateX = -self.translateX;
+    GLfloat sceneTranslateZ = -self.translateZ;
     
     glRotatef(sceneRotateY, 0.0f, 1.0f, 0.0);       // rotation around Y-axis (looking left and right)
     glRotatef(sceneRotateX, 1.0f, 0.0f, 0.0);       // rotation around Y-axis (looking left and right)
     glTranslatef(sceneTranslateX, 0.0f, sceneTranslateZ);
-    
+
+    GLfloat lightPosition[] = {3.0f, 3.0f, 4.0f, 1.0f};     // toward the viewer, in front of objects
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPosition);
+
 //  NSLog(@"x: %.2f z: %.2f", sceneTranslateX, sceneTranslateZ);
 }
 
@@ -439,20 +445,20 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     [hostStore lockStore];
     NSDictionary* orbitals = [hostStore inhabitedOrbitals];
     NSUInteger orbitalCount = [[orbitals allKeys] count];
-    
-    _previousSelection = nil;
-    _lastNodeCount = 0;
+
+    self.previousSelection = nil;
+    self.lastNodeCount = 0;
 
     for (NSNumber* orbitalNumber in orbitals)
     {
         NSArray* nodes = [orbitals objectForKey:orbitalNumber];
-        NSUInteger nodeCount = [nodes count];
-        float planeCount = floor(sqrt((double)nodeCount) + 1);
+        NSUInteger orbitalNodeCount = [nodes count];
+        float planeCount = floor(sqrt((double)orbitalNodeCount) + 1);
         float degreeSpacing = 360.0f / planeCount;
 
-        _lastNodeCount += nodeCount;
+        self.lastNodeCount += orbitalNodeCount;
         
-//      NSLog(@"Orbital %d with %lu nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], (unsigned long)nodeCount, planeCount, degreeSpacing);
+//      NSLog(@"Orbital %d with %lu nodes generates plane count of %.2f and degree spacing %.2f", [orbitalNumber intValue], (unsigned long)orbitalNodeCount, planeCount, degreeSpacing);
         
         NSUInteger nodesDrawn = 0;
         float thetaOffset = [orbitalNumber intValue] * 30.0;
@@ -460,7 +466,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         {
             for (float phi = 10; phi < 370.0; phi += degreeSpacing)
             {
-                if (nodesDrawn < nodeCount)
+                if (nodesDrawn < orbitalNodeCount)
                 {
                     Node* node = [nodes objectAtIndex:nodesDrawn];
                     
@@ -470,7 +476,30 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     GLfloat y = radius * sin(phi * (2*M_PI / 360.0)) * sin(theta * (2*M_PI / 360.0));
                     GLfloat z = radius * cos(phi * (2*M_PI / 360.0));
 
-                    glColor3f((1.0 / orbitalCount) * [orbitalNumber floatValue], 0, 0);
+                    float colourIntensity = (1.0 / orbitalCount) * ((orbitalCount+1) - [orbitalNumber floatValue]);
+                    colourIntensity = (colourIntensity >= kNodeMinimumColourIntensity) ? colourIntensity : kNodeMinimumColourIntensity;
+
+                    if (node.pulseIntensity > kNodeMinimumPulseIntensity && node.pulseBegin)
+                    {
+                        // Pulse the node from bright to dark
+                        glColor3f(node.pulseIntensity, node.pulseIntensity, node.pulseIntensity);
+                        node.pulseIntensity -= kNodePulseDeclinePerSecond*secondsSinceLastFrame;
+                    }
+                    else
+                    {
+                        node.pulseBegin = NO;
+                        
+                        if (node.pulseIntensity < colourIntensity)
+                        {
+                            // Pulse the node back to the desired intensity (prevents flashing)
+                            glColor3f(node.pulseIntensity, node.pulseIntensity, node.pulseIntensity);
+                            node.pulseIntensity += kNodePulseDeclinePerSecond*secondsSinceLastFrame;
+                        }
+                        else
+                        {
+                            glColor3f(colourIntensity, 0, 0);
+                        }
+                    }
 
                     [self drawNode:node x:x y:y z:z secondsSinceLastFrame:secondsSinceLastFrame];
                     
@@ -498,7 +527,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                 }
             }
         }
-        assert(nodesDrawn == nodeCount);
+        
+        assert(nodesDrawn == orbitalNodeCount);
     }
     
     [hostStore unlockStore];
@@ -518,8 +548,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     // not the translation of the last quad drawn (otherwise we end up drawing a torus).
     glPushMatrix();
     
-    GLfloat worldRotateY = 360.0f - _worldRotateY;
-    GLfloat worldRotateX = 360.0f - _worldRotateX;
+    GLfloat worldRotateY = 360.0f - self.worldRotateY;
+    GLfloat worldRotateX = 360.0f - self.worldRotateX;
     
     glRotatef(worldRotateY, 0.0f, 1.0f, 0.0);       // rotation around Y-axis (looking left and right)
     glRotatef(worldRotateX, 1.0f, 0.0f, 0.0);       // rotation around Y-axis (looking left and right)
@@ -536,8 +566,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         glGetIntegerv(GL_VIEWPORT, viewport);
         
         // Get the ray entry and exit points on the projection frustum
-        gluUnProject(_trackingMousePosition.x, _trackingMousePosition.y, 0.0, modelViewMatrix, projectionMatrix, viewport, &rayVertexNear[0], &rayVertexNear[1], &rayVertexNear[2]);
-        gluUnProject(_trackingMousePosition.x, _trackingMousePosition.y, 1.0, modelViewMatrix, projectionMatrix, viewport, &rayVertexFar[0], &rayVertexFar[1], &rayVertexFar[2]);
+        gluUnProject(self.trackingMousePosition.x, self.trackingMousePosition.y, 0.0, modelViewMatrix, projectionMatrix, viewport, &rayVertexNear[0], &rayVertexNear[1], &rayVertexNear[2]);
+        gluUnProject(self.trackingMousePosition.x, self.trackingMousePosition.y, 1.0, modelViewMatrix, projectionMatrix, viewport, &rayVertexFar[0], &rayVertexFar[1], &rayVertexFar[2]);
 
         glm::vec3 rayVectorNear, rayVectorFar, sphereCenter;
         rayVectorNear.x = rayVertexNear[0];
@@ -572,15 +602,15 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         Host* host = (Host*)node;
         glColor3f(1, 1, 0);
         glRasterPos3f(x+s, y+s, z);
-        [self glPrint:[NSString stringWithFormat:@"%@ [in: %lu] [out: %lu]", host.hostname.length ? host.hostname : host.ipAddress, host.bytesReceived, host.bytesSent]];
+        [self glPrint:[NSString stringWithFormat:@"%@ [in: %lu] [out: %lu] (orbit: %lu)", host.hostname.length ? host.hostname : host.ipAddress, host.bytesReceived, host.bytesSent, host.orbital]];
         
-        if (_previousSelection != nil)
+        if (self.previousSelection != nil)
         {
             // This is simply debugging used to detect multiple selection (ie. ray passed through > 1 node)
-            NSLog(@"Selected %@ (%.2f, %.2f, %.2f) but %@ already selected", node.identifier, x, y, z, _previousSelection.identifier);
+            NSLog(@"Selected %@ (%.2f, %.2f, %.2f) but %@ already selected", node.identifier, x, y, z, self.previousSelection.identifier);
         }
         
-        _previousSelection = node;
+        self.previousSelection = node;
     }
     
     glTranslatef(x, y, z);
@@ -588,7 +618,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     // Scale the node (nominally at size 1,1,1) to the size we need
     glScalef(s, s, s);
 
-    glCallList(_displayListNode);
+    glCallList(self.displayListNode);
 
     glPopMatrix();
 }
@@ -597,11 +627,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 {
     GLfloat radius = 1.00;
     
-    _displayListNode = glGenLists(1);
+    self.displayListNode = glGenLists(1);
     
-    glNewList(_displayListNode, GL_COMPILE);
+    glNewList(self.displayListNode, GL_COMPILE);
     
-    gluSphere(_quadric, radius, 32, 32);
+    gluSphere(self.quadric, radius, 32, 32);
     
     glEndList();
 }
@@ -623,7 +653,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glLoadIdentity();
     glColor3f(1, 1, 1);
     glRasterPos3f(5, 15, 0);
-    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@]", _lastNodeCount, _fps, _isWorldRotating ? @"world" : @"camera"]];
+    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@, light: %@]", self.lastNodeCount, self.fps, self.isWorldRotating ? @"world" : @"camera", self.isLightOn ? @"yes" : @"no"]];
     glPopMatrix();
 
     glMatrixMode(GL_PROJECTION);

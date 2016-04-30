@@ -28,6 +28,8 @@
         _rotation = 0.0f;
         _identifier = [identifier copy];
         _selected = NO;
+        _pulseIntensity = 1.00;
+        _pulseBegin = YES;
         
 //      NSLog(@"Node[%@]: Initialised with orbital: %lu, radius: %.2f", identifier, (unsigned long)_orbital, _radius);
     }
