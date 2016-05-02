@@ -8,7 +8,8 @@
 
 #import <Cocoa/Cocoa.h>
 
-#define kProbeTypeICMPEcho  0
+#define kProbeTypeICMPEcho      0
+#define kProbeTypeTraceroute    1
 
 @interface CaptureWorker : NSObject
 

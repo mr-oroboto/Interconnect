@@ -16,6 +16,7 @@
 #import <sys/ioctl.h>
 #import <netdb.h>
 #import "ICMPEchoProbe.h"
+#import "ICMPTimeExceededProbe.h"
 
 #define kLogTraffic NO
 #define kMaxConcurrentResolutionTasks   5
@@ -41,7 +42,8 @@
     {
         _workerRunning = NO;
         _stopWorker = NO;
-        _probeType = kProbeTypeICMPEcho;
+        _probeType = kProbeTypeTraceroute;
+//      _probeType = kProbeTypeICMPEcho;
         
         // Create a serial dispatch queue, we'll only ever queue up one task on it.
         _captureQueue = dispatch_queue_create("net.oroboto.Interconnect.CaptureWorker", NULL);
@@ -281,6 +283,28 @@
                 else
                 {
                     NSLog(@"Failed to get average RTT to %@", ipAddress);
+                }
+            });
+        }
+        else if (_probeType == kProbeTypeTraceroute)
+        {
+            dispatch_async(_probeQueue, ^{
+                ICMPTimeExceededProbe* probe = [ICMPTimeExceededProbe probeWithIPAddress:ipAddress];
+                NSInteger hopCount = [probe measureHopCount];
+                
+                if (hopCount >= 0)
+                {
+                    if (++hopCount > 12)
+                    {
+                        hopCount = 12;
+                    }
+                    
+                    NSLog(@"Updating host %@ group to %ld based on hop count %ld", ipAddress, hopCount, (hopCount - 1));
+                    [[HostStore sharedStore] updateHost:ipAddress withGroup:hopCount];
+                }
+                else
+                {
+                    NSLog(@"Failed to get hop count to %@", ipAddress);
                 }
             });
         }
