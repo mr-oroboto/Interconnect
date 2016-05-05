@@ -18,6 +18,7 @@
 		602A9FD31CC1AC360051CFEF /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FD21CC1AC360051CFEF /* Host.m */; };
 		6040C9721CD2C22400484468 /* ICMPEchoProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = 6040C9711CD2C22400484468 /* ICMPEchoProbe.m */; };
 		606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 606FFB171CC6DE1800A1CF70 /* HostStore.m */; };
+		6082E4841CDB3637005D3A14 /* HostResolver.m in Sources */ = {isa = PBXBuildFile; fileRef = 6082E4831CDB3637005D3A14 /* HostResolver.m */; };
 		6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */ = {isa = PBXBuildFile; fileRef = 6085D1F41CC30539001D9820 /* CaptureWorker.m */; };
 		60B072561CD5E50800045CB6 /* ICMPTimeExceededProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = 60B072551CD5E50800045CB6 /* ICMPTimeExceededProbe.m */; };
 		60CF9C891CC8C01D00E28888 /* NSFont_OpenGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 60CF9C881CC8C01D00E28888 /* NSFont_OpenGL.m */; };
@@ -155,6 +156,8 @@
 		6040C9711CD2C22400484468 /* ICMPEchoProbe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICMPEchoProbe.m; sourceTree = "<group>"; };
 		606FFB161CC6DE1800A1CF70 /* HostStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HostStore.h; sourceTree = "<group>"; };
 		606FFB171CC6DE1800A1CF70 /* HostStore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HostStore.m; sourceTree = "<group>"; };
+		6082E4821CDB3637005D3A14 /* HostResolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HostResolver.h; sourceTree = "<group>"; };
+		6082E4831CDB3637005D3A14 /* HostResolver.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HostResolver.m; sourceTree = "<group>"; };
 		6085D1F31CC30539001D9820 /* CaptureWorker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CaptureWorker.h; sourceTree = "<group>"; };
 		6085D1F41CC30539001D9820 /* CaptureWorker.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CaptureWorker.m; sourceTree = "<group>"; };
 		6085D1F71CC3102C001D9820 /* PacketHeaders.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PacketHeaders.h; sourceTree = "<group>"; };
@@ -517,6 +520,8 @@
 				6085D1F31CC30539001D9820 /* CaptureWorker.h */,
 				6085D1F41CC30539001D9820 /* CaptureWorker.m */,
 				6085D1F71CC3102C001D9820 /* PacketHeaders.h */,
+				6082E4821CDB3637005D3A14 /* HostResolver.h */,
+				6082E4831CDB3637005D3A14 /* HostResolver.m */,
 			);
 			name = Capture;
 			sourceTree = "<group>";
@@ -989,6 +994,7 @@
 				600333691CBA06B8007BA868 /* OpenGLView.mm in Sources */,
 				600333561CBA0673007BA868 /* AppDelegate.m in Sources */,
 				6040C9721CD2C22400484468 /* ICMPEchoProbe.m in Sources */,
+				6082E4841CDB3637005D3A14 /* HostResolver.m in Sources */,
 				60ECFE711CCD8471006420D4 /* glm.cpp in Sources */,
 				602A9FD31CC1AC360051CFEF /* Host.m in Sources */,
 				60B072561CD5E50800045CB6 /* ICMPTimeExceededProbe.m in Sources */,

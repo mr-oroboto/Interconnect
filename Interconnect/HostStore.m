@@ -141,4 +141,18 @@
     [self unlockStore];
 }
 
+- (void)updateHost:(NSString*)identifier withAS:(NSString*)as andASDescription:(NSString*)asDesc
+{
+    [self lockStore];
+    
+    Host* host = (Host*)[self node:identifier];
+    if (host)
+    {
+        [host setAutonomousSystem:as];
+        [host setAutonomousSystemDesc:asDesc];
+    }
+    
+    [self unlockStore];
+}
+
 @end

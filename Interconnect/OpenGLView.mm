@@ -600,9 +600,15 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     if (node && node.selected)
     {
         Host* host = (Host*)node;
+        NSString *asDetails = @"";
+        if (host.autonomousSystem.length)
+        {
+            asDetails = [NSString stringWithFormat:@" <AS%@ %@>", host.autonomousSystem, host.autonomousSystemDesc];
+        }
+
         glColor3f(1, 1, 0);
         glRasterPos3f(x+s, y+s, z);
-        [self glPrint:[NSString stringWithFormat:@"%@ [in: %lu] [out: %lu] (orbit: %lu)", host.hostname.length ? host.hostname : host.ipAddress, host.bytesReceived, host.bytesSent, host.orbital]];
+        [self glPrint:[NSString stringWithFormat:@"%@%@ [in: %lu] [out: %lu] (orbit: %lu)", host.hostname.length ? host.hostname : host.ipAddress, asDetails, host.bytesReceived, host.bytesSent, host.orbital]];
         
         if (self.previousSelection != nil)
         {

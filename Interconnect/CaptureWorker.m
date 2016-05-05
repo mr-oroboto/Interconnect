@@ -14,9 +14,9 @@
 #import <arpa/inet.h>
 #import <net/if.h>
 #import <sys/ioctl.h>
-#import <netdb.h>
 #import "ICMPEchoProbe.h"
 #import "ICMPTimeExceededProbe.h"
+#import "HostResolver.h"
 
 #define kLogTraffic NO
 #define kMaxConcurrentResolutionTasks   5
@@ -176,8 +176,8 @@
         return;
     }
     
-    NSString* srcHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_saddr)];
-    NSString* dstHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_daddr)];
+    NSString* srcHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_saddr) encoding:NSASCIIStringEncoding];
+    NSString* dstHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_daddr) encoding:NSASCIIStringEncoding];
     unsigned int transferBytes = ntohs(ip_hdr->ip_len);     // don't include ethernet frame etc
     
     if (ip_hdr->ip_proto == IPPROTO_TCP)
@@ -256,7 +256,7 @@
     if ([[HostStore sharedStore] updateHostBytesTransferred:ipAddress addBytesIn:bytesFromUs addBytesOut:bytesToUs])
     {
         // First time we've seen this host, resolve its name and send off a probe to work out what its orbital should be.
-        NSInvocationOperation* resolverOperation = [[NSInvocationOperation alloc] initWithTarget:self selector:@selector(resolveNameForAddress:) object:ipAddress];
+        NSInvocationOperation* resolverOperation = [[NSInvocationOperation alloc] initWithTarget:self selector:@selector(resolveHostDetailsForAddress:) object:ipAddress];
         [self.resolverQueue addOperation:resolverOperation];
 
         if (_probeType == kProbeTypeICMPEcho)
@@ -311,34 +311,24 @@
     }
 }
 
-#pragma mark - Name Resolution
+#pragma mark - Host Detail Resolution
 
-- (void)resolveNameForAddress:(NSString*)ipAddress
+- (void)resolveHostDetailsForAddress:(NSString*)ipAddress
 {
-    struct in_addr sin_addr;
+    HostResolver* resolver = [[HostResolver alloc] initWithIPAddress:ipAddress];
     
-    if ( ! inet_aton([ipAddress cStringUsingEncoding:NSASCIIStringEncoding], &sin_addr))
+    NSString *resolvedName = [resolver resolveHostName];
+    if (resolvedName.length)
     {
-        NSLog(@"Could not convert IP address [%@]", ipAddress);
-        return;
+        NSLog(@"Resolved [%@] to [%@]", ipAddress, resolvedName);
+        [[HostStore sharedStore] updateHost:ipAddress withName:resolvedName];        
     }
-
-    char hostname[NI_MAXHOST];
-    struct sockaddr_in saddr;
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin_addr = sin_addr;
-    saddr.sin_family = AF_INET;
-    saddr.sin_len = sizeof(saddr);
     
-    if (getnameinfo((const struct sockaddr*)&saddr, saddr.sin_len, hostname, sizeof(hostname), NULL, 0, NI_NOFQDN | NI_NAMEREQD) != 0)
+    NSDictionary *asDetails = [resolver resolveASDetails];
+    if (asDetails[@"as"] && asDetails[@"asDesc"])
     {
-        NSLog(@"Could not resolve IP address [%@]", ipAddress);
-        return;
+        [[HostStore sharedStore] updateHost:ipAddress withAS:asDetails[@"as"] andASDescription:asDetails[@"asDesc"]];
     }
-
-    NSString* resolvedName = [NSString stringWithFormat:@"%s", hostname];
-    NSLog(@"Resolved [%@] to [%@]", ipAddress, resolvedName);
-    [[HostStore sharedStore] updateHost:ipAddress withName:resolvedName];
 }
 
 @end

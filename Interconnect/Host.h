@@ -13,6 +13,8 @@
 
 @property (nonatomic, copy) NSString* ipAddress;
 @property (nonatomic, copy) NSString* hostname;
+@property (nonatomic, copy) NSString* autonomousSystem;
+@property (nonatomic, copy) NSString* autonomousSystemDesc;
 @property (nonatomic) NSUInteger bytesSent;
 @property (nonatomic) NSUInteger bytesReceived;
 
