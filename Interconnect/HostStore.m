@@ -78,6 +78,7 @@
         // All nodes will grow from 0.01 to their initial volume size and start off in the first orbital
         host = [Host createInGroup:1 withIdentifier:identifier andVolume:0.01];
         host.ipAddress = identifier;
+        host.originConnector = 2.0;
         [self addNode:host];
         hostCreated = YES;
     }

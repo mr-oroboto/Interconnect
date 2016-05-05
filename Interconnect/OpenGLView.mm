@@ -109,6 +109,7 @@
     glDepthFunc(GL_LEQUAL);
 
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
     
     // Ambient light
     GLfloat lightAmbient[]  = {0.5f, 0.5f, 0.5f, 1.0f};
@@ -617,6 +618,16 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         }
         
         self.previousSelection = node;
+    }
+    
+    if (node && node.originConnector > 0)
+    {
+        glBegin(GL_LINES);
+            glVertex3d(0, 0, 0);
+            glVertex3d(x, y, z);
+        glEnd();
+
+        node.originConnector -= secondsSinceLastFrame;
     }
     
     glTranslatef(x, y, z);
