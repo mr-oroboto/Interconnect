@@ -20,6 +20,7 @@
 
 #define kLogTraffic NO
 #define kMaxConcurrentResolutionTasks   5
+#define kRecalculateHostSizeEachSecs 10000
 
 @interface CaptureWorker ()
 
@@ -31,6 +32,7 @@
 @property (nonatomic) bpf_u_int32 interfaceAddress;         // IPv4 address of capture interface
 @property (nonatomic) bpf_u_int32 interfaceMask;            // IPv4 netmask of capture interface
 @property (nonatomic) NSUInteger probeType;
+@property (nonatomic) float msSinceLastHostResize;
 
 @end
 
@@ -42,6 +44,7 @@
     {
         _workerRunning = NO;
         _stopWorker = NO;
+        _msSinceLastHostResize = 0;
         _probeType = kProbeTypeTraceroute;
 //      _probeType = kProbeTypeICMPEcho;
         
@@ -87,7 +90,7 @@
         _workerRunning = YES;
         
         NSLog(@"captureBlock started on thread %@", [NSThread currentThread]);
-
+        
         char errbuf[PCAP_ERRBUF_SIZE];
         char *device;
         pcap_t *capture_handle;
@@ -132,10 +135,22 @@
                  pcap_setfilter()
                  */
                 
+                struct timeval timeStart, timeEnd;
+                
                 while ( ! _stopWorker)
                 {
+                    gettimeofday(&timeStart, NULL);
+
                     packet = pcap_next(capture_handle, &header);
                     [self processEthernetFrame:packet header:&header];
+
+                    gettimeofday(&timeEnd, NULL);
+
+                    self.msSinceLastHostResize += [self msElapsedBetween:&timeStart endTime:&timeEnd];
+                    if (self.msSinceLastHostResize >= kRecalculateHostSizeEachSecs)
+                    {
+                        [self recalculateHostSizes];
+                    }
                 }
             }
             else
@@ -309,6 +324,27 @@
             });
         }
     }
+}
+
+- (void)recalculateHostSizes
+{
+    NSLog(@"%.2f ms have elapsed since last host resizing, resizing hosts", self.msSinceLastHostResize);
+    
+    [[HostStore sharedStore] recalculateHostSizesBasedOnBytesTransferred];
+    
+    self.msSinceLastHostResize = 0;
+}
+
+- (float)msElapsedBetween:(const struct timeval*)startTime endTime:(const struct timeval*)endTime
+{
+    float msElapsed = (endTime->tv_usec - startTime->tv_usec) / 1000.0;
+    
+    if (endTime->tv_sec - startTime->tv_sec)
+    {
+        msElapsed = ((((endTime->tv_sec - startTime->tv_sec) - 1) * 1000000) + (1000000 - startTime->tv_usec) + endTime->tv_usec) / 1000.0;
+    }
+    
+    return msElapsed;
 }
 
 #pragma mark - Host Detail Resolution

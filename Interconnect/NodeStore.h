@@ -20,6 +20,7 @@
 - (void)updateNode:(Node*)node withOrbital:(NSUInteger)orbital;
 - (Node*)node:(NSString*)identifier;
 - (NSDictionary*)inhabitedOrbitals;
+- (NSDictionary*)nodes;
 
 - (void)lockStore;
 - (void)unlockStore;

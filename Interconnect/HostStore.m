@@ -112,6 +112,34 @@
 }
 
 /**
+ * This method can be periodically called to resize the node set based on the number of bytes the host has 
+ * transferred vs the largest number of bytes we've ever seen transferred by a host. This is required because
+ * host resizing only occurs when new bytes are seen: old hosts won't ever be appropriately resized.
+ */
+- (void)recalculateHostSizesBasedOnBytesTransferred
+{
+    [self lockStore];
+    
+    NSDictionary* hosts = [self nodes];
+    
+    for (id hostIdentifier in hosts)
+    {
+        Host* host = hosts[hostIdentifier];
+        
+        float volume = ([host bytesTransferred] / _largestBytesSeen) * kMaxVolume;
+            
+        if (volume < kMinVolume)
+        {
+           volume = kMinVolume;
+        }
+            
+        [host setTargetVolume:volume];
+    }
+    
+    [self unlockStore];
+}
+
+/**
  * Hosts can be grouped based on common attributes (ie. their hop count from us, the average RTT to them, their AS etc).
  *
  * Host groups are implemented as orbitals, hosts in the same group appear in the same orbital.

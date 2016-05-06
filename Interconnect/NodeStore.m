@@ -110,4 +110,9 @@
     return self.orbitals;
 }
 
+- (NSDictionary*)nodes
+{
+    return self.nodesByIdentifier;
+}
+
 @end
