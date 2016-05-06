@@ -12,10 +12,14 @@
 
 #define kMaxVolume  0.3
 #define kMinVolume  0.05
+#define kPreferredColourBasedProtocol 0
+#define kPreferredColourBaseAS 1
 
 @interface HostStore ()
 
 @property (nonatomic) NSUInteger largestBytesSeen;
+@property (nonatomic) NSInteger preferredColorMode;
+@property (nonatomic) NSDictionary* protocolColourMap;
 
 @end
 
@@ -46,6 +50,29 @@
     if (self = [super init])
     {
         _largestBytesSeen = 0.0;
+
+        _protocolColourMap = @{
+                               @0:   @[@0.3, @0.3, @0.3],         // non-TCP
+                               @20:  @[@0.87, @0.0, @0.49],       // ftp-data
+                               @21:  @[@0.87, @0.0, @0.49],       // ftp
+                               @22:  @[@0.48, @0.62, @0.20],      // ssh
+                               @23:  @[@0.48, @0.62, @0.20],      // telnet
+                               @25:  @[@1.0, @0.99, @0.0],        // smtp
+                               @43:  @[@0.1, @0.1, @0.1],         // whois
+                               @80:  @[@0.21, @0.0, @0.80],       // http
+                               @110: @[@1.0, @0.99, @0.0],        // pop3
+                               @137: @[@0.13, @0.40, @0.40],      // netbios name
+                               @138: @[@0.13, @0.40, @0.40],      // netbios data
+                               @139: @[@0.13, @0.40, @0.40],      // netbios session
+                               @143: @[@1.0, @0.99, @0.0],        // imap
+                               @443: @[@0.21, @0.0, @0.80],       // ssl
+        };
+        
+        /**
+         * If hosts will be coloured based on their preferred colour (which is up to the renderer) then
+         * how do we determine what their preferred colour is?
+         */
+        _preferredColorMode = kPreferredColourBasedProtocol;
     }
     
     return self;
@@ -53,7 +80,7 @@
 
 #pragma mark - Host Management
 
-- (BOOL)updateHostBytesTransferred:(NSString*)identifier addBytesIn:(NSUInteger)bytesIn addBytesOut:(NSUInteger)bytesOut
+- (BOOL)updateHostBytesTransferred:(NSString*)identifier addBytesIn:(NSUInteger)bytesIn addBytesOut:(NSUInteger)bytesOut port:(NSUInteger)port
 {
     BOOL hostCreated = NO;
     
@@ -79,6 +106,22 @@
         host = [Host createInGroup:1 withIdentifier:identifier andVolume:0.01];
         host.ipAddress = identifier;
         host.originConnector = 2.0;
+        host.firstPortSeen = port;
+        
+        if (self.preferredColorMode == kPreferredColourBasedProtocol)
+        {
+            // Do we have a preferred colour for the protocol?
+            NSNumber* portNumber = [NSNumber numberWithUnsignedInteger:port];
+            NSArray* preferredColour = self.protocolColourMap[portNumber];
+
+            if (preferredColour)
+            {
+                host.preferredRed = [preferredColour[0] floatValue];
+                host.preferredGreen = [preferredColour[1] floatValue];
+                host.preferredBlue = [preferredColour[2] floatValue];
+            }
+        }
+
         [self addNode:host];
         hostCreated = YES;
     }

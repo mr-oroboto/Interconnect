@@ -31,6 +31,10 @@
         _pulseIntensity = 1.00;
         _pulseBegin = YES;
         
+        _preferredRed = 1.0;
+        _preferredGreen = 0.0;
+        _preferredBlue = 0.0;
+        
 //      NSLog(@"Node[%@]: Initialised with orbital: %lu, radius: %.2f", identifier, (unsigned long)_orbital, _radius);
     }
     

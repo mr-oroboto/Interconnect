@@ -21,6 +21,7 @@
     {
         _bytesSent = 0;
         _bytesReceived = 0;
+        _firstPortSeen = 0;
     }
     
     return self;

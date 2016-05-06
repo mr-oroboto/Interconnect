@@ -20,6 +20,9 @@
 @property (nonatomic) float pulseIntensity;
 @property (nonatomic) BOOL pulseBegin;
 @property (nonatomic) float originConnector;
+@property (nonatomic) float preferredRed;
+@property (nonatomic) float preferredGreen;
+@property (nonatomic) float preferredBlue;
 
 + (instancetype)createInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;
 - (instancetype)initInOrbital:(NSUInteger)orbital withIdentifier:(NSString*)identifier andVolume:(float)volume;

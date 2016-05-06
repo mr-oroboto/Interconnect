@@ -16,7 +16,7 @@
 
 + (instancetype)sharedStore;
 
-- (BOOL)updateHostBytesTransferred:(NSString*)identifier addBytesIn:(NSUInteger)bytesIn addBytesOut:(NSUInteger)bytesOut;
+- (BOOL)updateHostBytesTransferred:(NSString*)identifier addBytesIn:(NSUInteger)bytesIn addBytesOut:(NSUInteger)bytesOut port:(NSUInteger)port;
 - (void)updateHost:(NSString*)identifier withGroup:(NSUInteger)group;
 - (void)updateHost:(NSString*)identifier withName:(NSString*)name;
 - (void)updateHost:(NSString*)identifier withAS:(NSString*)as andASDescription:(NSString*)asDesc;

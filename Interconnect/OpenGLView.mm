@@ -29,6 +29,8 @@
 #define kDisplayListCountForText 95
 #define kCameraInitialX 0
 #define kCameraInitialZ 8
+#define kColourationByOrbital 0
+#define kColourationByPreferredColour 1
 
 @interface OpenGLView()
 
@@ -48,6 +50,7 @@
 @property (nonatomic) Host* previousSelection;
 @property (nonatomic) NSUInteger lastNodeCount;
 @property (nonatomic) double fps;
+@property (nonatomic) NSInteger colourationMode;
 
 @property (nonatomic) GLuint displayListNode;           // display list for node objects
 @property (nonatomic) GLuint displayListFontBase;       // base pointer to display lists for font set
@@ -78,6 +81,9 @@
     _worldRotateY = 0;
     
     _picking = NO;
+    
+//  _colourationMode = kColourationByOrbital;
+    _colourationMode = kColourationByPreferredColour;
     
     [self becomeFirstResponder];
 }
@@ -477,9 +483,6 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     GLfloat y = radius * sin(phi * (2*M_PI / 360.0)) * sin(theta * (2*M_PI / 360.0));
                     GLfloat z = radius * cos(phi * (2*M_PI / 360.0));
 
-                    float colourIntensity = (1.0 / orbitalCount) * ((orbitalCount+1) - [orbitalNumber floatValue]);
-                    colourIntensity = (colourIntensity >= kNodeMinimumColourIntensity) ? colourIntensity : kNodeMinimumColourIntensity;
-
                     if (node.pulseIntensity > kNodeMinimumPulseIntensity && node.pulseBegin)
                     {
                         // Pulse the node from bright to dark
@@ -489,7 +492,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     else
                     {
                         node.pulseBegin = NO;
-                        
+
+                        float colourIntensity = (1.0 / orbitalCount) * ((orbitalCount+1) - [orbitalNumber floatValue]);
+                        colourIntensity = (colourIntensity >= kNodeMinimumColourIntensity) ? colourIntensity : kNodeMinimumColourIntensity;
+
                         if (node.pulseIntensity < colourIntensity)
                         {
                             // Pulse the node back to the desired intensity (prevents flashing)
@@ -498,7 +504,14 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                         }
                         else
                         {
-                            glColor3f(colourIntensity, 0, 0);
+                            if (self.colourationMode == kColourationByOrbital)
+                            {
+                                glColor3f(colourIntensity, 0, 0);
+                            }
+                            else if (self.colourationMode == kColourationByPreferredColour)
+                            {
+                                glColor3f(node.preferredRed, node.preferredGreen, node.preferredBlue);
+                            }
                         }
                     }
 
@@ -601,15 +614,21 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     if (node && node.selected)
     {
         Host* host = (Host*)node;
-        NSString *asDetails = @"";
+        NSString *asDetails = @"", *firstPort = @"";
+
         if (host.autonomousSystem.length)
         {
             asDetails = [NSString stringWithFormat:@" <AS%@ %@>", host.autonomousSystem, host.autonomousSystemDesc];
         }
+        
+        if (host.firstPortSeen)
+        {
+            firstPort = [NSString stringWithFormat:@":%lu", host.firstPortSeen];
+        }
 
         glColor3f(1, 1, 0);
         glRasterPos3f(x+s, y+s, z);
-        [self glPrint:[NSString stringWithFormat:@"%@%@ [in: %lu] [out: %lu] (orbit: %lu)", host.hostname.length ? host.hostname : host.ipAddress, asDetails, host.bytesReceived, host.bytesSent, host.orbital]];
+        [self glPrint:[NSString stringWithFormat:@"%@%@%@ [in: %lu] [out: %lu]", host.hostname.length ? host.hostname : host.ipAddress, firstPort, asDetails, host.bytesReceived, host.bytesSent]];
         
         if (self.previousSelection != nil)
         {

@@ -17,6 +17,7 @@
 @property (nonatomic, copy) NSString* autonomousSystemDesc;
 @property (nonatomic) NSUInteger bytesSent;
 @property (nonatomic) NSUInteger bytesReceived;
+@property (nonatomic) NSUInteger firstPortSeen;
 
 + (instancetype)createInGroup:(NSUInteger)group withIdentifier:(NSString*)identifier andVolume:(float)volume;
 

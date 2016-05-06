@@ -193,6 +193,7 @@
     
     NSString* srcHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_saddr) encoding:NSASCIIStringEncoding];
     NSString* dstHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_daddr) encoding:NSASCIIStringEncoding];
+    NSUInteger srcPort = 0, dstPort = 0;
     unsigned int transferBytes = ntohs(ip_hdr->ip_len);     // don't include ethernet frame etc
     
     if (ip_hdr->ip_proto == IPPROTO_TCP)
@@ -209,37 +210,43 @@
         // TCP segment
         unsigned char* payload = (unsigned char*)(packet + ETHER_HEADER_LEN + ip_hdr_len + tcp_hdr_len);
         unsigned int payload_len = ntohs(ip_hdr->ip_len) - ip_hdr_len - tcp_hdr_len;
-        
+
+        srcPort = ntohs(tcp_hdr->tcp_sport);
+        dstPort = ntohs(tcp_hdr->tcp_dport);
+
         if (kLogTraffic)
         {
-            NSLog(@"%@ -> %@: TCP srcPort[%d] -> dstPort[%d] of %d bytes", srcHost, dstHost, ntohs(tcp_hdr->tcp_sport), ntohs(tcp_hdr->tcp_dport), payload_len);
+            NSLog(@"TCP  %@:%lu -> %@:%lu  %d bytes", srcHost, srcPort, dstHost, dstPort, payload_len);
         }
     }
     else if (ip_hdr->ip_proto == IPPROTO_UDP)
     {
         if (kLogTraffic)
         {
-            NSLog(@"%@ -> %@: UDP", srcHost, dstHost);
+          NSLog(@"UDP  %@ -> %@", srcHost, dstHost);
         }
     }
     else if (ip_hdr->ip_proto == IPPROTO_ICMP)
     {
-        NSLog(@"%@ -> %@: ICMP", srcHost, dstHost);
+        if (kLogTraffic)
+        {
+            NSLog(@"ICMP %@ -> %@", srcHost, dstHost);            
+        }
     }
     else
     {
-        NSLog(@"%@ -> %@: Unsupported IP protocol [%d]", srcHost, dstHost, ip_hdr->ip_proto);
+        NSLog(@"**** %@ -> %@: Unsupported IP protocol [%d]", srcHost, dstHost, ip_hdr->ip_proto);
     }
     
     if (ip_hdr->ip_saddr.s_addr == _interfaceAddress)
     {
         // traffic from us to them
-        [self updateHost:dstHost addBytesToUs:0 addBytesFromUs:transferBytes];
+        [self updateHost:dstHost addBytesToUs:0 addBytesFromUs:transferBytes port:dstPort];
     }
     else if (ip_hdr->ip_daddr.s_addr == _interfaceAddress)
     {
         // traffic from them to us
-        [self updateHost:srcHost addBytesToUs:transferBytes addBytesFromUs:0];
+        [self updateHost:srcHost addBytesToUs:transferBytes addBytesFromUs:0 port:srcPort];
     }
 }
 
@@ -266,9 +273,9 @@
     return NO;
 }
 
-- (void)updateHost:(NSString*)ipAddress addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs
+- (void)updateHost:(NSString*)ipAddress addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs port:(NSUInteger)port
 {
-    if ([[HostStore sharedStore] updateHostBytesTransferred:ipAddress addBytesIn:bytesFromUs addBytesOut:bytesToUs])
+    if ([[HostStore sharedStore] updateHostBytesTransferred:ipAddress addBytesIn:bytesFromUs addBytesOut:bytesToUs port:port])
     {
         // First time we've seen this host, resolve its name and send off a probe to work out what its orbital should be.
         NSInvocationOperation* resolverOperation = [[NSInvocationOperation alloc] initWithTarget:self selector:@selector(resolveHostDetailsForAddress:) object:ipAddress];
