@@ -22,6 +22,9 @@
 		6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */ = {isa = PBXBuildFile; fileRef = 6085D1F41CC30539001D9820 /* CaptureWorker.m */; };
 		60B072561CD5E50800045CB6 /* ICMPTimeExceededProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = 60B072551CD5E50800045CB6 /* ICMPTimeExceededProbe.m */; };
 		60CF9C891CC8C01D00E28888 /* NSFont_OpenGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 60CF9C881CC8C01D00E28888 /* NSFont_OpenGL.m */; };
+		60D3B6301CE7EB6000447CD6 /* ProbeThread.m in Sources */ = {isa = PBXBuildFile; fileRef = 60D3B62F1CE7EB6000447CD6 /* ProbeThread.m */; };
+		60D3B6331CE7FDC000447CD6 /* ICMPEchoProbeThread.m in Sources */ = {isa = PBXBuildFile; fileRef = 60D3B6321CE7FDC000447CD6 /* ICMPEchoProbeThread.m */; };
+		60D3B6361CE7FFF900447CD6 /* Probe.m in Sources */ = {isa = PBXBuildFile; fileRef = 60D3B6351CE7FFF900447CD6 /* Probe.m */; };
 		60D8D4D41CBB7A79006ADE15 /* libpcap.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 60D8D4D31CBB7A79006ADE15 /* libpcap.tbd */; };
 		60ECFE691CCD8471006420D4 /* func_common.inl in Resources */ = {isa = PBXBuildFile; fileRef = 60ECFD711CCD8471006420D4 /* func_common.inl */; };
 		60ECFE6A1CCD8471006420D4 /* func_exponential.inl in Resources */ = {isa = PBXBuildFile; fileRef = 60ECFD731CCD8471006420D4 /* func_exponential.inl */; };
@@ -165,6 +168,14 @@
 		60B072551CD5E50800045CB6 /* ICMPTimeExceededProbe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICMPTimeExceededProbe.m; sourceTree = "<group>"; };
 		60CF9C871CC8C01D00E28888 /* NSFont_OpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSFont_OpenGL.h; sourceTree = "<group>"; };
 		60CF9C881CC8C01D00E28888 /* NSFont_OpenGL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSFont_OpenGL.m; sourceTree = "<group>"; };
+		60D3B62E1CE7EB6000447CD6 /* ProbeThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProbeThread.h; sourceTree = "<group>"; };
+		60D3B62F1CE7EB6000447CD6 /* ProbeThread.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ProbeThread.m; sourceTree = "<group>"; };
+		60D3B6311CE7FDC000447CD6 /* ICMPEchoProbeThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ICMPEchoProbeThread.h; sourceTree = "<group>"; };
+		60D3B6321CE7FDC000447CD6 /* ICMPEchoProbeThread.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICMPEchoProbeThread.m; sourceTree = "<group>"; };
+		60D3B6341CE7FFF900447CD6 /* Probe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Probe.h; sourceTree = "<group>"; };
+		60D3B6351CE7FFF900447CD6 /* Probe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Probe.m; sourceTree = "<group>"; };
+		60D3B6371CE801D400447CD6 /* ProbeThread+Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ProbeThread+Private.h"; sourceTree = "<group>"; };
+		60D3B6381CE80AF200447CD6 /* ProbeThread+ProbeInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ProbeThread+ProbeInterface.h"; sourceTree = "<group>"; };
 		60D8D4D31CBB7A79006ADE15 /* libpcap.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libpcap.tbd; path = usr/lib/libpcap.tbd; sourceTree = SDKROOT; };
 		60ECFD671CCD8471006420D4 /* common.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = common.hpp; sourceTree = "<group>"; };
 		60ECFD691CCD8471006420D4 /* _features.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = _features.hpp; sourceTree = "<group>"; };
@@ -510,6 +521,14 @@
 				6040C9711CD2C22400484468 /* ICMPEchoProbe.m */,
 				60B072541CD5E50800045CB6 /* ICMPTimeExceededProbe.h */,
 				60B072551CD5E50800045CB6 /* ICMPTimeExceededProbe.m */,
+				60D3B62E1CE7EB6000447CD6 /* ProbeThread.h */,
+				60D3B62F1CE7EB6000447CD6 /* ProbeThread.m */,
+				60D3B6381CE80AF200447CD6 /* ProbeThread+ProbeInterface.h */,
+				60D3B6371CE801D400447CD6 /* ProbeThread+Private.h */,
+				60D3B6311CE7FDC000447CD6 /* ICMPEchoProbeThread.h */,
+				60D3B6321CE7FDC000447CD6 /* ICMPEchoProbeThread.m */,
+				60D3B6341CE7FFF900447CD6 /* Probe.h */,
+				60D3B6351CE7FFF900447CD6 /* Probe.m */,
 			);
 			name = Probes;
 			sourceTree = "<group>";
@@ -987,6 +1006,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				60D3B6301CE7EB6000447CD6 /* ProbeThread.m in Sources */,
 				602A9FD01CC1AC250051CFEF /* Node.m in Sources */,
 				606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */,
 				600333591CBA0673007BA868 /* main.m in Sources */,
@@ -996,8 +1016,10 @@
 				6040C9721CD2C22400484468 /* ICMPEchoProbe.m in Sources */,
 				6082E4841CDB3637005D3A14 /* HostResolver.m in Sources */,
 				60ECFE711CCD8471006420D4 /* glm.cpp in Sources */,
+				60D3B6361CE7FFF900447CD6 /* Probe.m in Sources */,
 				602A9FD31CC1AC360051CFEF /* Host.m in Sources */,
 				60B072561CD5E50800045CB6 /* ICMPTimeExceededProbe.m in Sources */,
+				60D3B6331CE7FDC000447CD6 /* ICMPEchoProbeThread.m in Sources */,
 				6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */,
 				60CF9C891CC8C01D00E28888 /* NSFont_OpenGL.m in Sources */,
 			);

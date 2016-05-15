@@ -2,7 +2,7 @@
 //  HostStore.m
 //  Interconnect
 //
-//  Created by jjs on 20/04/2016.
+//  Created by oroboto on 20/04/2016.
 //  Copyright © 2016 oroboto. All rights reserved.
 //
 
@@ -14,6 +14,7 @@
 #define kMinVolume  0.05
 #define kPreferredColourBasedProtocol 0
 #define kPreferredColourBaseAS 1
+#define kMaxHostGroups 12
 
 @interface HostStore ()
 
@@ -73,6 +74,11 @@
          * how do we determine what their preferred colour is?
          */
         _preferredColorMode = kPreferredColourBasedProtocol;
+        
+        /**
+         * How will hosts be grouped?
+         */
+        _groupingStrategy = kHostStoreGroupBasedOnHopCount;
     }
     
     return self;
@@ -88,21 +94,9 @@
 
     Host* host = (Host*)[self node:identifier];
     
-    /**
-     * A volume of kMaxVolume is reserved for the host(s) that have transferred the largest number of bytes,
-     * the volume of all other nodes is based on the ratio of the number of bytes they have transferred vs
-     * the number of bytes that the largest node has transferred.
-     *
-     * @todo:
-     *
-     * Node size is only reassessed when new bytes arrive so the sizing algorithm will sometimes show some 
-     * older nodes as bigger than they should be: we should periodically sweep the nodes and recalculate the
-     * size.
-     */
-
     if ( ! host)
     {
-        // All nodes will grow from 0.01 to their initial volume size and start off in the first orbital
+        // All nodes will grow from 0.01 to their initial volume size and start off in the first orbital (grouping occurs when more details are known)
         host = [Host createInGroup:1 withIdentifier:identifier andVolume:0.01];
         host.ipAddress = identifier;
         host.originConnector = 2.0;
@@ -126,6 +120,12 @@
         hostCreated = YES;
     }
     
+    /**
+     * A volume of kMaxVolume is reserved for the host(s) that have transferred the largest number of bytes,
+     * the volume of all other nodes is based on the ratio of the number of bytes they have transferred vs
+     * the number of bytes that the largest node has transferred.
+     */
+
     NSUInteger totalBytesTransferredByNode = [host bytesTransferred] + bytesIn + bytesOut;
     if ( ! _largestBytesSeen || totalBytesTransferredByNode > _largestBytesSeen)
     {
@@ -182,24 +182,6 @@
     [self unlockStore];
 }
 
-/**
- * Hosts can be grouped based on common attributes (ie. their hop count from us, the average RTT to them, their AS etc).
- *
- * Host groups are implemented as orbitals, hosts in the same group appear in the same orbital.
- */
-- (void)updateHost:(NSString*)identifier withGroup:(NSUInteger)group
-{
-    [self lockStore];
-
-    Host* host = (Host*)[self node:identifier];
-    if (host)
-    {
-        [super updateNode:host withOrbital:group];
-    }
-    
-    [self unlockStore];
-}
-
 - (void)updateHost:(NSString*)identifier withName:(NSString*)name
 {
     [self lockStore];
@@ -224,6 +206,159 @@
         [host setAutonomousSystemDesc:asDesc];
     }
     
+    [self unlockStore];
+    
+    if (self.groupingStrategy == kHostStoreGroupBasedOnAS)
+    {
+        NSUInteger hostGroup = [self hostGroupBasedOnAS:as];
+        NSLog(@"Updating host %@ group to %lu based on %@", identifier, hostGroup, as);
+        [self updateHost:identifier withGroup:hostGroup];
+    }
+}
+
+- (void)updateHost:(NSString*)identifier withRTT:(float)rtt
+{
+    [self lockStore];
+    
+    Host* host = (Host*)[self node:identifier];
+    if (host)
+    {
+        host.rtt = rtt;
+    }
+    
+    [self unlockStore];
+
+    if (self.groupingStrategy == kHostStoreGroupBasedOnRTT)
+    {
+        NSUInteger hostGroup = [self hostGroupBasedOnRTT:rtt];
+        NSLog(@"Updating host %@ group to %lu based on RTT of %.2fms", identifier, hostGroup, rtt);
+        [self updateHost:identifier withGroup:hostGroup];
+    }
+}
+
+- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount
+{
+    ++hopCount;
+    
+    [self lockStore];
+    
+    Host* host = (Host*)[self node:identifier];
+    if (host)
+    {
+        host.hopCount = hopCount;
+    }
+    
+    [self unlockStore];
+    
+    if (self.groupingStrategy == kHostStoreGroupBasedOnHopCount)
+    {
+        NSUInteger hostGroup = [self hostGroupBasedOnHopCount:hopCount];
+        NSLog(@"Updating host %@ group to %ld based on hop count %ld", identifier, hostGroup, (hopCount - 1));
+        [self updateHost:identifier withGroup:hostGroup];
+    }
+}
+
+#pragma mark - Group Management
+
+- (NSUInteger)hostGroupBasedOnRTT:(float)rtt
+{
+    NSUInteger hostGroup = (rtt / 50.0) + 1;      // 50ms bands
+    
+    if (hostGroup > kMaxHostGroups)
+    {
+        hostGroup = kMaxHostGroups;
+    }
+
+    return hostGroup;
+}
+
+- (NSUInteger)hostGroupBasedOnHopCount:(NSUInteger)hopCount
+{
+    if (hopCount > kMaxHostGroups)
+    {
+        hopCount = kMaxHostGroups;
+    }
+    
+    if (hopCount == 0)
+    {
+        hopCount = 1;
+    }
+
+    return hopCount;
+}
+
+- (NSUInteger)hostGroupBasedOnAS:(NSString*)as
+{
+    NSUInteger hostGroup = [as integerValue] % kMaxHostGroups;
+
+    if (hostGroup == 0)
+    {
+        hostGroup = 1;
+    }
+    
+    return hostGroup;
+}
+
+/**
+ * Hosts can be grouped based on common attributes (ie. their hop count from us, the average RTT to them, their AS etc).
+ *
+ * Host groups are implemented as orbitals, hosts in the same group appear in the same orbital.
+ */
+- (void)updateHost:(NSString*)identifier withGroup:(NSUInteger)group
+{
+    [self lockStore];
+    
+    Host* host = (Host*)[self node:identifier];
+    if (host)
+    {
+        [super updateNode:host withOrbital:group];
+    }
+    
+    [self unlockStore];
+}
+
+- (void)regroupHostsBasedOnStrategy:(NSUInteger)strategy
+{
+    BOOL validStrategy = NO;
+    
+    [self lockStore];
+    
+    NSDictionary* hosts = [self nodes];
+    
+    for (id hostIdentifier in hosts)
+    {
+        Host* host = hosts[hostIdentifier];
+        NSUInteger hostGroup = 1;       // default if host does not have enough information for grouping
+        
+        switch (strategy)
+        {
+            case kHostStoreGroupBasedOnHopCount:
+                validStrategy = YES;
+                hostGroup = [self hostGroupBasedOnHopCount:host.hopCount];
+                break;
+                
+            case kHostStoreGroupBasedOnRTT:
+                validStrategy = YES;
+                hostGroup = [self hostGroupBasedOnRTT:host.rtt];
+                break;
+                
+            case kHostStoreGroupBasedOnAS:
+                validStrategy = YES;
+                hostGroup = [self hostGroupBasedOnAS:host.autonomousSystem];
+                break;
+                
+            default:
+                NSLog(@"Unknown grouping strategy, will not regroup hosts");
+        }
+
+        [super updateNode:host withOrbital:hostGroup];
+    }
+
+    if (validStrategy)
+    {
+        self.groupingStrategy = strategy;
+    }
+
     [self unlockStore];
 }
 

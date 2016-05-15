@@ -18,6 +18,8 @@
 @property (nonatomic) NSUInteger bytesSent;
 @property (nonatomic) NSUInteger bytesReceived;
 @property (nonatomic) NSUInteger firstPortSeen;
+@property (nonatomic) float rtt;
+@property (nonatomic) NSUInteger hopCount;
 
 + (instancetype)createInGroup:(NSUInteger)group withIdentifier:(NSString*)identifier andVolume:(float)volume;
 

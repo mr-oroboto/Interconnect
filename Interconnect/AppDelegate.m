@@ -10,10 +10,13 @@
 #import "HostStore.h"
 #import "Host.h"
 #import "CaptureWorker.h"
+#import "ICMPEchoProbeThread.h"
 
 @interface AppDelegate ()
 
 @property (weak) IBOutlet NSWindow *window;
+@property (nonatomic, strong) ProbeThread* thread;
+
 @end
 
 @implementation AppDelegate
@@ -22,7 +25,19 @@
 {
     CaptureWorker* worker = [[CaptureWorker alloc] init];
 //  [self createSampleData];
-    [worker startCapture];
+//  [worker startCapture];
+
+    NSLog(@"main thread: %@", [NSThread currentThread]);
+    
+    [NSTimer scheduledTimerWithTimeInterval:2 target:self selector:@selector(sampleOrbitalChange) userInfo:nil repeats:NO];
+
+    _thread = [[ICMPEchoProbeThread alloc] init];
+    [self.thread start];
+    [self.thread queueProbeForHost:@"203.9.148.2"];
+    [self.thread queueProbeForHost:@"216.58.199.68"];
+    [self.thread queueProbeForHost:@"150.101.161.8"];
+    [self.thread queueProbeForHost:@"150.107.72.65"];
+    [self.thread queueProbeForHost:@"189.113.174.199"];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
@@ -59,7 +74,8 @@
 
 - (void)sampleOrbitalChange
 {
-    [[HostStore sharedStore] updateHost:@"1.128" withGroup:5];
+    [self.thread processHostQueue];
+//  [[HostStore sharedStore] updateHost:@"1.128" withGroup:5];
 }
 
 @end

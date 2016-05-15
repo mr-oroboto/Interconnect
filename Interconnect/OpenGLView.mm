@@ -50,7 +50,9 @@
 @property (nonatomic) Host* previousSelection;
 @property (nonatomic) NSUInteger lastNodeCount;
 @property (nonatomic) double fps;
-@property (nonatomic) NSInteger colourationMode;
+@property (nonatomic) NSUInteger colourationMode;
+@property (nonatomic) NSUInteger groupingStrategy;
+@property (nonatomic) float nodeRadiusGrowthPerSecond;
 
 @property (nonatomic) GLuint displayListNode;           // display list for node objects
 @property (nonatomic) GLuint displayListFontBase;       // base pointer to display lists for font set
@@ -84,6 +86,10 @@
     
 //  _colourationMode = kColourationByOrbital;
     _colourationMode = kColourationByPreferredColour;
+
+    _groupingStrategy = [[HostStore sharedStore] groupingStrategy];
+    
+    _nodeRadiusGrowthPerSecond = kNodeRadiusGrowthPerSecond;
     
     [self becomeFirstResponder];
 }
@@ -215,6 +221,35 @@
     else if ([[theEvent characters] isEqualToString:@"w"])
     {
         self.isWorldRotating = ! self.isWorldRotating;
+    }
+    else if ([[theEvent characters] isEqualToString:@"g"])
+    {
+        switch (self.groupingStrategy)
+        {
+            case kHostStoreGroupBasedOnHopCount:
+                self.groupingStrategy = kHostStoreGroupBasedOnRTT;
+                break;
+            case kHostStoreGroupBasedOnRTT:
+                self.groupingStrategy = kHostStoreGroupBasedOnAS;
+                break;
+            case kHostStoreGroupBasedOnAS:
+                self.groupingStrategy = kHostStoreGroupBasedOnHopCount;
+                break;
+        }
+        
+        self.nodeRadiusGrowthPerSecond = 1.2;   // @todo: reset this one the regrouping is complete
+        [[HostStore sharedStore] regroupHostsBasedOnStrategy:self.groupingStrategy];
+    }
+    else if ([[theEvent characters] isEqualToString:@"c"])
+    {
+        if (self.colourationMode == kColourationByPreferredColour)
+        {
+            self.colourationMode = kColourationByOrbital;
+        }
+        else
+        {
+            self.colourationMode = kColourationByPreferredColour;
+        }
     }
     else if ([theEvent modifierFlags] & NSNumericPadKeyMask)
     {
@@ -520,12 +555,12 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     if (node.radius < [orbitalNumber floatValue])
                     {
                         // The node needs to float to its true orbital position
-                        [node growRadius:kNodeRadiusGrowthPerSecond*secondsSinceLastFrame];
+                        [node growRadius:self.nodeRadiusGrowthPerSecond*secondsSinceLastFrame];
                     }
                     else if (node.radius > [orbitalNumber floatValue])
                     {
                         // The node needs to float to its true orbital position
-                        [node shrinkRadius:kNodeRadiusGrowthPerSecond*secondsSinceLastFrame];
+                        [node shrinkRadius:self.nodeRadiusGrowthPerSecond*secondsSinceLastFrame];
                     }
 
                     if (node.volume < [node targetVolume])
@@ -674,6 +709,21 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
 - (void)drawHUD
 {
+    NSString *groupingStrategy = @"";
+    
+    switch (self.groupingStrategy)
+    {
+        case kHostStoreGroupBasedOnHopCount:
+            groupingStrategy = @"hops";
+            break;
+        case kHostStoreGroupBasedOnRTT:
+            groupingStrategy = @"RTT";
+            break;
+        case kHostStoreGroupBasedOnAS:
+            groupingStrategy = @"AS";
+            break;
+    }
+    
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
 
@@ -689,7 +739,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glLoadIdentity();
     glColor3f(1, 1, 1);
     glRasterPos3f(5, 15, 0);
-    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@, light: %@]", self.lastNodeCount, self.fps, self.isWorldRotating ? @"world" : @"camera", self.isLightOn ? @"yes" : @"no"]];
+    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@, light: %@, colour: %@, groups: %@]", self.lastNodeCount, self.fps, self.isWorldRotating ? @"world" : @"camera", self.isLightOn ? @"yes" : @"no", self.colourationMode == kColourationByPreferredColour ? @"preferred" : @"orbital", groupingStrategy]];
     glPopMatrix();
 
     glMatrixMode(GL_PROJECTION);

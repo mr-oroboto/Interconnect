@@ -292,15 +292,7 @@
                 
                 if (rttToHost > 0)
                 {
-                    NSUInteger hostGroup = (rttToHost / 50.0) + 1;      // 50ms bands
-                    
-                    if (hostGroup > 12)
-                    {
-                        hostGroup = 12;
-                    }
-                    
-                    NSLog(@"Updating host %@ group to %lu based on RTT of %.2fms", ipAddress, hostGroup, rttToHost);
-                    [[HostStore sharedStore] updateHost:ipAddress withGroup:hostGroup];
+                    [[HostStore sharedStore] updateHost:ipAddress withRTT:rttToHost];
                 }
                 else
                 {
@@ -316,13 +308,7 @@
                 
                 if (hopCount >= 0)
                 {
-                    if (++hopCount > 12)
-                    {
-                        hopCount = 12;
-                    }
-                    
-                    NSLog(@"Updating host %@ group to %ld based on hop count %ld", ipAddress, hopCount, (hopCount - 1));
-                    [[HostStore sharedStore] updateHost:ipAddress withGroup:hopCount];
+                    [[HostStore sharedStore] updateHost:ipAddress withHopCount:hopCount];
                 }
                 else
                 {

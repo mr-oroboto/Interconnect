@@ -22,6 +22,8 @@
         _bytesSent = 0;
         _bytesReceived = 0;
         _firstPortSeen = 0;
+        _rtt = 0;
+        _hopCount = 0;
     }
     
     return self;
