@@ -2,15 +2,14 @@
 //  ICMPTimeExceededProbe.h
 //  Interconnect
 //
-//  Created by jjs on 1/05/2016.
+//  Created by oroboto on 1/05/2016.
 //  Copyright © 2016 oroboto. All rights reserved.
 //
 
-#import <Foundation/Foundation.h>
+#import "ICMPProbe.h"
 
-@interface ICMPTimeExceededProbe : NSObject
+@interface ICMPTimeExceededProbe : ICMPProbe
 
-+ (ICMPTimeExceededProbe*)probeWithIPAddress:(NSString*)ipAddress;
 - (NSInteger)measureHopCount;
 
 @end

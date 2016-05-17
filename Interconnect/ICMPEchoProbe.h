@@ -6,8 +6,11 @@
 //  Copyright © 2016 oroboto. All rights reserved.
 //
 
-#import <Foundation/Foundation.h>
+#import "ICMPProbe.h"
 
+/**
+ * Possible values for lastError
+ */
 #define kICMPEchoProbeErrorNone        0
 #define kICMPEchoProbeErrorNoSocket    1
 #define kICMPEchoProbeErrorPacket      2
@@ -17,11 +20,10 @@
 #define kICMPEchoProbeErrorRecv        6
 #define kICMPEchoProbeInvalidPacket    7
 
-@interface ICMPEchoProbe : NSObject
+@interface ICMPEchoProbe : ICMPProbe
 
 @property (nonatomic) NSUInteger lastError;
 
-+ (ICMPEchoProbe*)probeWithIPAddress:(NSString*)ipAddress;
 - (float)measureAverageRTT;
 
 @end

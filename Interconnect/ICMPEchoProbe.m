@@ -11,6 +11,7 @@
 //
 
 #import "ICMPEchoProbe.h"
+#import "ICMPProbe+Private.h"
 #import "PacketHeaders.h"
 #import <sys/socket.h>
 #import <netinet/in.h>
@@ -37,7 +38,7 @@
 
 @implementation ICMPEchoProbe
 
-+ (ICMPEchoProbe*)probeWithIPAddress:(NSString*)ipAddress
++ (instancetype)probeWithIPAddress:(NSString*)ipAddress
 {
     return [[ICMPEchoProbe alloc] initWithIPAddress:ipAddress];
 }
@@ -129,7 +130,7 @@
     self.sequenceNumber++;
     
     // Calculate the ICMP checksum (no need for endian swap, checksum calculated appropriately)
-    icmpSendHdr->icmp_cksum = [self icmpChecksum:(unsigned char*)[packet bytes] length:[packet length]];
+    icmpSendHdr->icmp_cksum = [self internetChecksum:(unsigned char*)[packet bytes] length:[packet length]];
 
     // Send it
     struct timeval timeSent, timeRecv;
@@ -222,7 +223,7 @@
     struct icmp* icmpRecvHdr = (struct icmp*)((unsigned char*)[packetRecv bytes] + IP_HDR_LEN(ipHdr));
     uint16_t checksumRecv = icmpRecvHdr->icmp_cksum;
     icmpRecvHdr->icmp_cksum = 0;
-    uint16_t checksumNeeded = [self icmpChecksum:(unsigned char*)icmpRecvHdr length:(bytesRead - IP_HDR_LEN(ipHdr))];
+    uint16_t checksumNeeded = [self internetChecksum:(unsigned char*)icmpRecvHdr length:(bytesRead - IP_HDR_LEN(ipHdr))];
     
     if (checksumRecv != checksumNeeded)
     {
@@ -254,60 +255,7 @@
     }
 
     // Calculate the number of ms elapsed between send and receive
-    float returnTripMs = (timeRecv.tv_usec - timeSent.tv_usec) / 1000.0;
-    if (timeRecv.tv_sec - timeSent.tv_sec)
-    {
-        returnTripMs = ((((timeRecv.tv_sec - timeSent.tv_sec) - 1) * 1000000) + (1000000 - timeSent.tv_usec) + timeRecv.tv_usec) / 1000.0;
-    }
-    
-    return returnTripMs;
-}
-
-/**
- * From Apple's SimplePing example code
- */
-- (uint16_t)icmpChecksum:(unsigned char*)data length:(uint16_t)length
-{
-    size_t bytesLeft;
-    int32_t sum;
-    const uint16_t* cursor;
-    union
-    {
-        uint16_t us;
-        uint8_t uc[2];
-    } last;
-    uint16_t answer;
-    
-    bytesLeft = length;
-    sum = 0;
-    cursor = (uint16_t*)data;
-    
-    /*
-     * Our algorithm is simple, using a 32 bit accumulator (sum), we add
-     * sequential 16 bit words to it, and at the end, fold back all the
-     * carry bits from the top 16 bits into the lower 16 bits.
-     */
-    while (bytesLeft > 1)
-    {
-        sum += *cursor;
-        cursor += 1;
-        bytesLeft -= 2;
-    }
-    
-    /* mop up an odd byte, if necessary */
-    if (bytesLeft == 1)
-    {
-        last.uc[0] = * (const uint8_t *) cursor;
-        last.uc[1] = 0;
-        sum += last.us;
-    }
-    
-    /* add back carry outs from top 16 bits to low 16 bits */
-    sum = (sum >> 16) + (sum & 0xffff); /* add hi 16 to low 16 */
-    sum += (sum >> 16);         /* add carry */
-    answer = (uint16_t) ~sum;   /* truncate to 16 bits */
-    
-    return answer;
+    return [self msElapsedBetween:&timeSent endTime:&timeRecv];
 }
 
 @end

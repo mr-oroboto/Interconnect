@@ -13,6 +13,7 @@
 		6003335E1CBA0673007BA868 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6003335C1CBA0673007BA868 /* MainMenu.xib */; };
 		600333661CBA068D007BA868 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 600333651CBA068D007BA868 /* OpenGL.framework */; };
 		600333691CBA06B8007BA868 /* OpenGLView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 600333681CBA06B8007BA868 /* OpenGLView.mm */; };
+		601930F51CEAE45B00327405 /* ICMPProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = 601930F41CEAE45B00327405 /* ICMPProbe.m */; };
 		602A9FCD1CC1AC1A0051CFEF /* NodeStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCC1CC1AC1A0051CFEF /* NodeStore.m */; };
 		602A9FD01CC1AC250051CFEF /* Node.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCF1CC1AC250051CFEF /* Node.m */; };
 		602A9FD31CC1AC360051CFEF /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FD21CC1AC360051CFEF /* Host.m */; };
@@ -150,6 +151,9 @@
 		600333651CBA068D007BA868 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		600333671CBA06B8007BA868 /* OpenGLView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpenGLView.h; sourceTree = "<group>"; };
 		600333681CBA06B8007BA868 /* OpenGLView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OpenGLView.mm; sourceTree = "<group>"; };
+		601930F31CEAE45B00327405 /* ICMPProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ICMPProbe.h; sourceTree = "<group>"; };
+		601930F41CEAE45B00327405 /* ICMPProbe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICMPProbe.m; sourceTree = "<group>"; };
+		601930F61CEAE59900327405 /* ICMPProbe+Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ICMPProbe+Private.h"; sourceTree = "<group>"; };
 		602A9FCB1CC1AC1A0051CFEF /* NodeStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NodeStore.h; sourceTree = "<group>"; };
 		602A9FCC1CC1AC1A0051CFEF /* NodeStore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NodeStore.m; sourceTree = "<group>"; };
 		602A9FCE1CC1AC250051CFEF /* Node.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Node.h; sourceTree = "<group>"; };
@@ -502,6 +506,20 @@
 			name = Views;
 			sourceTree = "<group>";
 		};
+		601930F71CEAE73B00327405 /* Legacy */ = {
+			isa = PBXGroup;
+			children = (
+				601930F31CEAE45B00327405 /* ICMPProbe.h */,
+				601930F61CEAE59900327405 /* ICMPProbe+Private.h */,
+				601930F41CEAE45B00327405 /* ICMPProbe.m */,
+				6040C9701CD2C22400484468 /* ICMPEchoProbe.h */,
+				6040C9711CD2C22400484468 /* ICMPEchoProbe.m */,
+				60B072541CD5E50800045CB6 /* ICMPTimeExceededProbe.h */,
+				60B072551CD5E50800045CB6 /* ICMPTimeExceededProbe.m */,
+			);
+			name = Legacy;
+			sourceTree = "<group>";
+		};
 		602A9FCA1CC1AC060051CFEF /* Model */ = {
 			isa = PBXGroup;
 			children = (
@@ -520,10 +538,7 @@
 		6040C96F1CD2C21200484468 /* Probes */ = {
 			isa = PBXGroup;
 			children = (
-				6040C9701CD2C22400484468 /* ICMPEchoProbe.h */,
-				6040C9711CD2C22400484468 /* ICMPEchoProbe.m */,
-				60B072541CD5E50800045CB6 /* ICMPTimeExceededProbe.h */,
-				60B072551CD5E50800045CB6 /* ICMPTimeExceededProbe.m */,
+				601930F71CEAE73B00327405 /* Legacy */,
 				60D3B62E1CE7EB6000447CD6 /* ProbeThread.h */,
 				60D3B62F1CE7EB6000447CD6 /* ProbeThread.m */,
 				60D3B6381CE80AF200447CD6 /* ProbeThread+ProbeInterface.h */,
@@ -1028,6 +1043,7 @@
 				60D3B6331CE7FDC000447CD6 /* ICMPEchoProbeThread.m in Sources */,
 				6085D1F51CC30539001D9820 /* CaptureWorker.m in Sources */,
 				60CF9C891CC8C01D00E28888 /* NSFont_OpenGL.m in Sources */,
+				601930F51CEAE45B00327405 /* ICMPProbe.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
