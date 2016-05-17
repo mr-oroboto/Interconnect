@@ -14,8 +14,11 @@
 #import <arpa/inet.h>
 #import <net/if.h>
 #import <sys/ioctl.h>
+#import "Probe.h"
 #import "ICMPEchoProbe.h"
 #import "ICMPTimeExceededProbe.h"
+#import "ICMPEchoProbeThread.h"
+#import "ICMPTimeExceededProbeThread.h"
 #import "HostResolver.h"
 
 #define kLogTraffic NO
@@ -33,6 +36,7 @@
 @property (nonatomic) bpf_u_int32 interfaceMask;            // IPv4 netmask of capture interface
 @property (nonatomic) NSUInteger probeType;
 @property (nonatomic) float msSinceLastHostResize;
+@property (nonatomic) ProbeThread* probeThread;
 
 @end
 
@@ -47,12 +51,7 @@
         _msSinceLastHostResize = 0;
         _probeType = kProbeTypeTraceroute;
 //      _probeType = kProbeTypeICMPEcho;
-        
-        // Create a serial dispatch queue, we'll only ever queue up one task on it.
-        _captureQueue = dispatch_queue_create("net.oroboto.Interconnect.CaptureWorker", NULL);
-        _probeQueue = dispatch_queue_create("net.oroboto.Interconnect.Probes", NULL);
-        _resolverQueue = [[NSOperationQueue alloc] init];
-        [_resolverQueue setMaxConcurrentOperationCount:kMaxConcurrentResolutionTasks];
+        _probeType = kProbeTypeThreadICMPEcho;
 
         // Ensure our header definitions will work
         if (sizeof(unsigned short) != 2)
@@ -64,6 +63,37 @@
         {
             [NSException raise:@"Expected unsigned int to be 4 bytes" format:@""];
         }
+        
+        _probeQueue = nil;
+        _probeThread = nil;
+        
+        switch (_probeType)
+        {
+            case kProbeTypeICMPEcho:
+            case kProbeTypeTraceroute:
+                _probeQueue = dispatch_queue_create("net.oroboto.Interconnect.Probes", NULL);
+                break;
+                
+            case kProbeTypeThreadICMPEcho:
+                _probeThread = [[ICMPEchoProbeThread alloc] init];
+                [_probeThread start];
+                break;
+                
+            case kProbeTypeThreadTraceroute:
+                _probeThread = [[ICMPTimeExceededProbeThread alloc] init];
+                [_probeThread start];
+                break;
+                
+            default:
+                [NSException raise:@"CaptureWorker" format:@"Unknown probe type"];
+        }
+        
+        // Create a serial dispatch queue, we'll only ever queue up one task on it.
+        _captureQueue = dispatch_queue_create("net.oroboto.Interconnect.CaptureWorker", NULL);
+        
+        // Whereas we can run multiple resolver tasks concurrently
+        _resolverQueue = [[NSOperationQueue alloc] init];
+        [_resolverQueue setMaxConcurrentOperationCount:kMaxConcurrentResolutionTasks];
     }
     
     return self;
@@ -281,7 +311,7 @@
         NSInvocationOperation* resolverOperation = [[NSInvocationOperation alloc] initWithTarget:self selector:@selector(resolveHostDetailsForAddress:) object:ipAddress];
         [self.resolverQueue addOperation:resolverOperation];
 
-        if (_probeType == kProbeTypeICMPEcho)
+        if (self.probeType == kProbeTypeICMPEcho)
         {
             // Using a "connected" SOCK_DGRAM for ICMP echos does not demultiplex ICMP echo responses from different
             // hosts to the "right" socket. Until the ICMP echo probe is implemented as a single thread that consumes
@@ -300,7 +330,7 @@
                 }
             });
         }
-        else if (_probeType == kProbeTypeTraceroute)
+        else if (self.probeType == kProbeTypeTraceroute)
         {
             dispatch_async(_probeQueue, ^{
                 ICMPTimeExceededProbe* probe = [ICMPTimeExceededProbe probeWithIPAddress:ipAddress];
@@ -315,6 +345,27 @@
                     NSLog(@"Failed to get hop count to %@", ipAddress);
                 }
             });
+        }
+        else if (self.probeType == kProbeTypeThreadICMPEcho || self.probeType == kProbeTypeThreadTraceroute)
+        {
+            /**
+             * This block will be called on the probe thread itself, which is important because only that thread
+             * can clean up (and invalidate) probe objects.
+             */
+            void (^probeFinishedBlock)(Probe*) = ^void(Probe* probe) {
+                if (self.probeType == kProbeTypeThreadTraceroute && probe.currentTTL > 0)
+                {
+                    NSLog(@"Updating %@ with hop count %u from probe", probe.hostIdentifier, probe.currentTTL);
+                    [[HostStore sharedStore] updateHost:probe.hostIdentifier withHopCount:probe.currentTTL];
+                }
+                else if (self.probeType == kProbeTypeThreadICMPEcho && probe.rttToHost > 0)
+                {
+                    NSLog(@"Updating %@ with RTT %.2fms from probe", probe.hostIdentifier, probe.rttToHost);
+                    [[HostStore sharedStore] updateHost:probe.hostIdentifier withRTT:probe.rttToHost];
+                }
+            };
+            
+            [self.probeThread queueProbeForHost:ipAddress withPriority:YES onCompletion:probeFinishedBlock];
         }
     }
 }
@@ -349,7 +400,7 @@
     NSString *resolvedName = [resolver resolveHostName];
     if (resolvedName.length)
     {
-        NSLog(@"Resolved [%@] to [%@]", ipAddress, resolvedName);
+//      NSLog(@"Resolved [%@] to [%@]", ipAddress, resolvedName);
         [[HostStore sharedStore] updateHost:ipAddress withName:resolvedName];        
     }
     

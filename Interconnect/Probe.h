@@ -15,9 +15,11 @@
 @property (nonatomic) uint16_t icmpIdentifier;
 @property (nonatomic) uint16_t sequenceNumber;
 @property (nonatomic) uint8_t currentTTL;
+@property (nonatomic) float rttToHost;
 @property (nonatomic) uint16_t dstPort;
 @property (nonatomic) struct timeval timeSent;
 @property (nonatomic) BOOL inflight;
 @property (nonatomic) BOOL complete;
+@property (nonatomic, copy) void (^completionBlock)(Probe*);
 
 @end

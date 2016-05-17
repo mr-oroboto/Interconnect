@@ -50,7 +50,7 @@
 
 #pragma mark - ProbeInterface
 
-- (void)sendProbe:(NSString*)toHostIdentifier
+- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock
 {
     [NSException raise:@"sendProbe" format:@"Must be over-ridden"];
 }
@@ -83,16 +83,27 @@
 #pragma mark - Custom Run Loop Input Source (Public Interface)
 
 /**
- * Add a host to the probe queue.
+ * Add a host to the probe queue. 
+ *
+ * Expected to be called in the context of the client thread.
  */
-- (void)queueProbeForHost:(NSString *)hostIdentifier
+- (void)queueProbeForHost:(NSString *)hostIdentifier withPriority:(BOOL)priority onCompletion:(void (^)(Probe*))completionBlock
 {
     [self.probeQueueLock lock];
-    [self.probeQueue addObject:hostIdentifier];
-
-    NSLog(@"%lu hosts ready for processing", self.probeQueue.count);
+    
+    NSDictionary* probeQueueEntry = @{
+                                      @"hostIdentifier": hostIdentifier,
+                                      @"completionBlock": completionBlock
+    };
+    
+    [self.probeQueue addObject:probeQueueEntry];
 
     [self.probeQueueLock unlock];
+    
+    if (priority)
+    {
+        [self processHostQueue];    // signal worker
+    }
 }
 
 /**
@@ -143,18 +154,15 @@ void RunLoopSourceCancelRoutine(void *context, CFRunLoopRef runLoop, CFStringRef
  */
 - (void)processNewHosts
 {
-    NSLog(@"processNewHosts called on %@", [NSThread currentThread]);
-    
     [self.probeQueueLock lock];
 
-    NSLog(@"%lu hosts to process", self.probeQueue.count);
+    NSLog(@"Worker found %lu hosts to probe", self.probeQueue.count);
 
-    NSString* hostIdentifier;
+    NSDictionary* probeQueueEntry;
     
-    while ((hostIdentifier = [self.probeQueue firstObject]))
+    while ((probeQueueEntry = [self.probeQueue firstObject]))
     {
-        NSLog(@"Processing %@", hostIdentifier);
-        [self sendProbe:hostIdentifier];
+        [self sendProbe:probeQueueEntry[@"hostIdentifier"] onCompletion:probeQueueEntry[@"completionBlock"]];
         [self.probeQueue removeObjectAtIndex:0];
     }
 
@@ -168,12 +176,8 @@ void RunLoopSourceCancelRoutine(void *context, CFRunLoopRef runLoop, CFStringRef
  */
 void SocketCallback(CFSocketRef s, CFSocketCallBackType callbackType, CFDataRef address, const void* data, void* info)
 {
-    NSLog(@"SocketCallback on thread %@", [NSThread currentThread]);
-    
     if (callbackType == kCFSocketReadCallBack)
     {
-        NSLog(@"SocketCallback found data available to read");
-
         ProbeThread* probeThread = (__bridge ProbeThread *)(info);
         [probeThread processIncomingSocketData];
     }
@@ -190,7 +194,7 @@ void SocketCallback(CFSocketRef s, CFSocketCallBackType callbackType, CFDataRef 
     
     @try
     {
-        NSLog(@"threadMain running on %@", [NSThread currentThread]);
+        NSLog(@"ProbeThread::threadMain running on %@", [NSThread currentThread]);
         
         self.cfRunLoop = CFRunLoopGetCurrent();
         
@@ -245,11 +249,11 @@ void SocketCallback(CFSocketRef s, CFSocketCallBackType callbackType, CFDataRef 
     }
     @catch (NSException *e)
     {
-        NSLog(@"threadMain caught exception: %@", e);
+        NSLog(@"ProbeThread::threadMain caught exception: %@", e);
     }
     @finally
     {
-        NSLog(@"threadMain exiting");
+        NSLog(@"ProbeThread::threadMain exiting");
         
         if (cfSocketRef)
         {

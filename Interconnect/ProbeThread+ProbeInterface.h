@@ -8,12 +8,14 @@
 //  Copyright © 2016 oroboto. All rights reserved.
 //
 
+@class Probe;
+
 @interface ProbeThread (oroboto_ProbeInterface)
 
 - (int)getNativeSocket;
 - (void)processIncomingSocketData;
 
-- (void)sendProbe:(NSString*)toHostIdentifier;
+- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock;
 - (void)cleanupProbes;
 
 @end

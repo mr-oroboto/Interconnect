@@ -8,11 +8,13 @@
 
 #import <Cocoa/Cocoa.h>
 
+@class Probe;
+
 @interface ProbeThread : NSObject
 
 - (void)start;
 - (void)stop;
-- (void)queueProbeForHost:(NSString*)hostIdentifier;
+- (void)queueProbeForHost:(NSString*)hostIdentifier withPriority:(BOOL)priority onCompletion:(void (^)(Probe*))completionBlock;
 - (void)processHostQueue;
 
 @end

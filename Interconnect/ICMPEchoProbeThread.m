@@ -57,21 +57,19 @@
     return self.socket;
 }
 
-- (void)sendProbe:(NSString*)toHostIdentifier
+- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock
 {
-    [self pingIPAddress:toHostIdentifier];
+    [self pingIPAddress:toHostIdentifier onCompletion:completionBlock];
 }
 
-- (NSInteger)pingIPAddress:(NSString*)ipAddress
+- (NSInteger)pingIPAddress:(NSString*)ipAddress onCompletion:completionBlock
 {
-    NSLog(@"Sending ICMP ping to %@", ipAddress);
-    
     // Have we already sent a probe to this host?
     Probe* probe = nil;
     
     if ((probe = self.probesByHostIdentifier[ipAddress]))
     {
-        NSLog(@"Host %@ already exists (identifier: %hu, sequence: %hu)", ipAddress, probe.icmpIdentifier, probe.sequenceNumber);
+        NSLog(@"Host %@ already exists (identifier: %hu, sequence: %hu), sending next probe", ipAddress, probe.icmpIdentifier, probe.sequenceNumber);
         
         if (probe.inflight)
         {
@@ -88,6 +86,7 @@
         probe.hostIdentifier = ipAddress;
         probe.icmpIdentifier = arc4random();
         probe.sequenceNumber = 0;
+        probe.completionBlock = completionBlock;
 
         self.probesByHostIdentifier[ipAddress] = probe;
         self.probesByICMPIdentifier[[NSNumber numberWithInt:probe.icmpIdentifier]] = probe;
@@ -145,8 +144,7 @@
 
 - (void)processIncomingSocketData
 {
-    float rtt = [self readICMPResponse];
-    NSLog(@"RTT was %.2f", rtt);
+    [self readICMPResponse];
 }
 
 - (float)readICMPResponse
@@ -162,7 +160,7 @@
         return -1;
     }
     
-    NSLog(@"Read %lu bytes from %s", bytesRead, inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr));
+//  NSLog(@"Read %lu bytes from %s", bytesRead, inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr));
 
     struct timeval timeRecv;
     if (gettimeofday(&timeRecv, NULL))
@@ -223,7 +221,8 @@
     if ((probe = self.probesByICMPIdentifier[[NSNumber numberWithInt:icmpIdentifier]]))
     {
         probe.inflight = NO;
-        NSLog(@"Found probe record for ICMP identifier %hu and host %@ (actual host: %s)", probe.icmpIdentifier, probe.hostIdentifier, inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr));
+        probe.complete = YES;
+//      NSLog(@"Found probe record for ICMP identifier %hu and host %@ (actual host: %s)", probe.icmpIdentifier, probe.hostIdentifier, inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr));
     }
     else
     {
@@ -238,7 +237,16 @@
     }
     
     // Calculate the number of ms elapsed between send and receive
-    return [self msElapsedBetween:probe.timeSent endTime:timeRecv];
+    probe.rttToHost = [self msElapsedBetween:probe.timeSent endTime:timeRecv];
+    
+    NSLog(@"Finished pinging %@ (RTT: %.2fms)", probe.hostIdentifier, probe.rttToHost);
+
+    if (probe.completionBlock)
+    {
+        probe.completionBlock(probe);
+    }
+    
+    return probe.rttToHost;
 }
 
 - (void)cleanupProbes

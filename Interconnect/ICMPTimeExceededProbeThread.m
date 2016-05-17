@@ -84,9 +84,9 @@ struct payload
     return self.icmpSocket;
 }
 
-- (void)sendProbe:(NSString*)toHostIdentifier
+- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock
 {
-    if ([self sendPortUnreachableUDPPacketToIPAddress:toHostIdentifier] == kError)
+    if ([self sendPortUnreachableUDPPacketToIPAddress:toHostIdentifier onCompletion:completionBlock] == kError)
     {
         [self resetProbe:toHostIdentifier allowRemovalOfInflightProbes:YES];
     }
@@ -117,10 +117,8 @@ struct payload
 /**
  * Send the (next) UDP packet to the host while ramping up the TTL in order to effect a UDP based traceroute.
  */
-- (NSInteger)sendPortUnreachableUDPPacketToIPAddress:(NSString*)ipAddress
+- (NSInteger)sendPortUnreachableUDPPacketToIPAddress:(NSString*)ipAddress onCompletion:(void (^)(Probe*))completionBlock
 {
-    NSLog(@"Sending (hopefully) port unreachable UDP packet to %@", ipAddress);
-
     /**
      * Have we already sent a UDP packet to this IP address? If so, it could be because we're in the middle of a traceroute,
      * but it could also be because we've already finished a complete traceroute to the host.
@@ -129,7 +127,7 @@ struct payload
     
     if ((probe = self.probesByHostIdentifier[ipAddress]))
     {
-        NSLog(@"Host %@ already exists (sequence: %hu, currentTTL: %hhu)", ipAddress, probe.sequenceNumber, probe.currentTTL);
+        NSLog(@"Host %@ already exists (sequence: %hu, currentTTL: %hhu), sending next probe", ipAddress, probe.sequenceNumber, probe.currentTTL);
         
         if (probe.inflight)
         {
@@ -192,6 +190,7 @@ struct payload
         probe.sequenceNumber = 0;
         probe.currentTTL = 1;
         probe.complete = NO;
+        probe.completionBlock = completionBlock;
         
         self.probesByHostIdentifier[ipAddress] = probe;
         self.probesByDstUDPPort[[NSNumber numberWithInt:probe.dstPort]] = probe;
@@ -258,7 +257,6 @@ struct payload
     switch ([self readICMPResponse])
     {
         case kNextHopIsDestination:
-            // @todo: report hop count and RTT to original caller
             break;
             
         case kNextHopIsRouter:
@@ -299,7 +297,7 @@ struct payload
         return kError;
     }
     
-    NSLog(@"Read %lu bytes from %s", bytesRead, inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr));
+//  NSLog(@"Read %lu bytes from %s", bytesRead, inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr));
     
     // Does this look like a valid ICMP error response? The returned packet will include the IP header.
     if (bytesRead < bytesNeeded)
@@ -363,13 +361,13 @@ struct payload
     
     if ((probe = self.probesByDstUDPPort[[NSNumber numberWithInt:dstPort]]))
     {
+//      NSLog(@"Found probe record for UDP port %hu and host %@ (actual host: %s)", probe.dstPort, probe.hostIdentifier, inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr));
         probe.inflight = NO;
-        NSLog(@"Found probe record for UDP port %hu and host %@ (actual host: %s)", probe.dstPort, probe.hostIdentifier, inet_ntoa(((struct sockaddr_in*)&srcAddr)->sin_addr));
 
         if (icmpRecvHdr->icmp_type == ICMP_TIMXCEED)
         {
             // We hit a router, keep going.
-            if ([self sendPortUnreachableUDPPacketToIPAddress:probe.hostIdentifier] != kError)
+            if ([self sendPortUnreachableUDPPacketToIPAddress:probe.hostIdentifier onCompletion:nil] != kError)
             {
                 return kNextHopIsRouter;
             }
@@ -380,9 +378,14 @@ struct payload
             probe.complete = YES;
 
             // Calculate the number of ms elapsed between send and receive
-            float rtt = [self msElapsedBetween:probe.timeSent endTime:timeRecv];
+            probe.rttToHost = [self msElapsedBetween:probe.timeSent endTime:timeRecv];
             
-            NSLog(@"*** Finished traceroute %@ (hops: %hhu, RTT: %.2fms)", probe.hostIdentifier, probe.currentTTL, rtt);
+            NSLog(@"Finished traceroute %@ (hops: %hhu, RTT: %.2fms)", probe.hostIdentifier, probe.currentTTL, probe.rttToHost);
+            
+            if (probe.completionBlock)
+            {
+                probe.completionBlock(probe);
+            }
 
             return kNextHopIsDestination;
         }
@@ -412,13 +415,13 @@ struct payload
         
         if (probe.complete)
         {
-            NSLog(@"*** Removing complete probe %@", probe.hostIdentifier);
+            NSLog(@"Removing complete probe %@", probe.hostIdentifier);
             [self resetProbe:probe.hostIdentifier allowRemovalOfInflightProbes:NO];
         }
         else if ([self msElapsedBetween:probe.timeSent endTime:now] > kMaxProbeFlightTimeMs)
         {
             // @todo: timeout could be due to simple one off UDP packet loss, add in a retry feature
-            NSLog(@"*** Removing timed out probe %@", probe.hostIdentifier);
+            NSLog(@"Removing timed out probe %@", probe.hostIdentifier);
             [self resetProbe:probe.hostIdentifier allowRemovalOfInflightProbes:YES];
         }
     }
