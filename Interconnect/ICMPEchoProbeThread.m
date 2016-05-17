@@ -241,4 +241,9 @@
     return [self msElapsedBetween:probe.timeSent endTime:timeRecv];
 }
 
+- (void)cleanupProbes
+{
+    // @todo: implement
+}
+
 @end

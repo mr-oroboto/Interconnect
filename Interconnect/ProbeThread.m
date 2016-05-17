@@ -72,6 +72,14 @@
     [NSException raise:@"processIncomingSocketData" format:@"Must be over-ridden"];
 }
 
+/**
+ * Should be overridden by derived classes.
+ */
+- (void)cleanupProbes
+{
+    [NSException raise:@"cleanupProbes" format:@"Must be over-ridden"];
+}
+
 #pragma mark - Custom Run Loop Input Source (Public Interface)
 
 /**
@@ -230,6 +238,8 @@ void SocketCallback(CFSocketRef s, CFSocketCallBackType callbackType, CFDataRef 
         {
             // Run the run loop but time out after 1 second if no input sources or timers have caused it to exit sooner
             [runLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1]];
+            
+            [self cleanupProbes];
         }
         while ( ! self.stopThread);
     }

@@ -14,7 +14,10 @@
 @property (nonatomic, copy) NSString* hostIdentifier;
 @property (nonatomic) uint16_t icmpIdentifier;
 @property (nonatomic) uint16_t sequenceNumber;
+@property (nonatomic) uint8_t currentTTL;
+@property (nonatomic) uint16_t dstPort;
 @property (nonatomic) struct timeval timeSent;
 @property (nonatomic) BOOL inflight;
+@property (nonatomic) BOOL complete;
 
 @end

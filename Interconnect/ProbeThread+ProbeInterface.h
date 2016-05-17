@@ -14,5 +14,6 @@
 - (void)processIncomingSocketData;
 
 - (void)sendProbe:(NSString*)toHostIdentifier;
+- (void)cleanupProbes;
 
 @end
