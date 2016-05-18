@@ -57,7 +57,7 @@
     return self.socket;
 }
 
-- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock
+- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock retrying:(BOOL)retrying
 {
     [self pingIPAddress:toHostIdentifier onCompletion:completionBlock];
 }
@@ -87,6 +87,7 @@
         probe.icmpIdentifier = arc4random();
         probe.sequenceNumber = 0;
         probe.completionBlock = completionBlock;
+        probe.retries = 0;
 
         self.probesByHostIdentifier[ipAddress] = probe;
         self.probesByICMPIdentifier[[NSNumber numberWithInt:probe.icmpIdentifier]] = probe;

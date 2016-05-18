@@ -50,7 +50,7 @@
 
 #pragma mark - ProbeInterface
 
-- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock
+- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock retrying:(BOOL)retrying
 {
     [NSException raise:@"sendProbe" format:@"Must be over-ridden"];
 }
@@ -91,10 +91,14 @@
 {
     [self.probeQueueLock lock];
     
-    NSDictionary* probeQueueEntry = @{
-                                      @"hostIdentifier": hostIdentifier,
-                                      @"completionBlock": completionBlock
-    };
+    NSMutableDictionary* probeQueueEntry = [@{
+                                      @"hostIdentifier": hostIdentifier
+    } mutableCopy];
+    
+    if (completionBlock != nil)
+    {
+        probeQueueEntry[@"completionBlock"] = completionBlock;
+    }
     
     [self.probeQueue addObject:probeQueueEntry];
 
@@ -158,11 +162,11 @@ void RunLoopSourceCancelRoutine(void *context, CFRunLoopRef runLoop, CFStringRef
 
     NSLog(@"Worker found %lu hosts to probe", self.probeQueue.count);
 
-    NSDictionary* probeQueueEntry;
+    NSMutableDictionary* probeQueueEntry;
     
     while ((probeQueueEntry = [self.probeQueue firstObject]))
     {
-        [self sendProbe:probeQueueEntry[@"hostIdentifier"] onCompletion:probeQueueEntry[@"completionBlock"]];
+        [self sendProbe:probeQueueEntry[@"hostIdentifier"] onCompletion:(probeQueueEntry[@"completionBlock"] ? probeQueueEntry[@"completionBlock"] : nil) retrying:NO];
         [self.probeQueue removeObjectAtIndex:0];
     }
 

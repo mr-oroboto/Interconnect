@@ -15,7 +15,7 @@
 - (int)getNativeSocket;
 - (void)processIncomingSocketData;
 
-- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock;
+- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock retrying:(BOOL)retrying;
 - (void)cleanupProbes;
 
 @end

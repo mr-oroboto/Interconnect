@@ -23,9 +23,11 @@
 
 #define kMaxAttemptsToFindUnusedPort            10
 #define kBaseUDPPort                            30000
+#define kCompleteTimedOutProbes                 YES
 
 #define kMaxProbeTTL                            30
-#define kMaxProbeFlightTimeMs                   5000
+#define kMaxProbeFlightTimeMs                   10000
+#define kMaxProbeRetries                        3
 
 #define kError                                 -1
 #define kSuccess                                0
@@ -84,9 +86,9 @@ struct payload
     return self.icmpSocket;
 }
 
-- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock
+- (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock retrying:(BOOL)retrying
 {
-    if ([self sendPortUnreachableUDPPacketToIPAddress:toHostIdentifier onCompletion:completionBlock] == kError)
+    if ([self sendPortUnreachableUDPPacketToIPAddress:toHostIdentifier onCompletion:completionBlock retrying:retrying] == kError)
     {
         [self resetProbe:toHostIdentifier allowRemovalOfInflightProbes:YES];
     }
@@ -117,7 +119,7 @@ struct payload
 /**
  * Send the (next) UDP packet to the host while ramping up the TTL in order to effect a UDP based traceroute.
  */
-- (NSInteger)sendPortUnreachableUDPPacketToIPAddress:(NSString*)ipAddress onCompletion:(void (^)(Probe*))completionBlock
+- (NSInteger)sendPortUnreachableUDPPacketToIPAddress:(NSString*)ipAddress onCompletion:(void (^)(Probe*))completionBlock retrying:(BOOL)retrying
 {
     /**
      * Have we already sent a UDP packet to this IP address? If so, it could be because we're in the middle of a traceroute,
@@ -129,20 +131,44 @@ struct payload
     {
         NSLog(@"Host %@ already exists (sequence: %hu, currentTTL: %hhu), sending next probe", ipAddress, probe.sequenceNumber, probe.currentTTL);
         
-        if (probe.inflight)
-        {
-            [NSException raise:@"sendPortUnreachableUDPPacketToIPAddress" format:@"Cannot send UDP packet to %@ as there is already a packet in flight", ipAddress];
-        }
-        
         if (probe.complete)
         {
             // Must call resetProbe: if we want to reprobe the host.
             [NSException raise:@"sendPortUnreachableUDPPacketToIPAddress" format:@"Cannot send probe to %@ as we have already completed a full probe for it.", ipAddress];
         }
 
-        // Get ready to send the next probe to find the next hop
-        probe.sequenceNumber++;
-        probe.currentTTL++;
+        if ( ! retrying)
+        {
+            if (probe.inflight)
+            {
+                [NSException raise:@"sendPortUnreachableUDPPacketToIPAddress" format:@"Cannot send UDP packet to %@ as there is already a packet in flight", ipAddress];
+            }
+
+            // Get ready to send the next probe to find the next hop (otherwise we're retrying last hop)
+            probe.sequenceNumber++;
+            probe.currentTTL++;
+            probe.retries = 0;              // reset retry count, it's per hop
+        }
+        else
+        {
+            if (++probe.retries > kMaxProbeRetries)
+            {
+                NSLog(@"Retry limit (%d) exceeded for %@", kMaxProbeRetries, probe.hostIdentifier);
+                return kError;
+            }
+            
+            // Need to change the destination port in case the response comes back (if it does, we should ignore it)
+            [self.probesByDstUDPPort removeObjectForKey:[NSNumber numberWithInt:probe.dstPort]];
+            
+            probe.dstPort = [self generateDestinationPortForProbe];
+            if ( ! probe.dstPort)
+            {
+                NSLog(@"Could not resend probe to %@ as an unused UDP port is not available", ipAddress);
+                return kError;
+            }
+            
+            self.probesByDstUDPPort[[NSNumber numberWithInt:probe.dstPort]] = probe;
+        }
         
         if (probe.currentTTL > kMaxProbeTTL)
         {
@@ -152,31 +178,7 @@ struct payload
     }
     else
     {
-        uint16_t dstPort, attempts = 0;
-        
-        do
-        {
-            dstPort = kBaseUDPPort + (arc4random() % (65535 - kBaseUDPPort));
-            NSNumber *portKey = [NSNumber numberWithInt:dstPort];
-
-            // Have we already sent a probe to this port? If so, we can only reuse it if the probe is complete.
-            if (self.probesByDstUDPPort[[NSNumber numberWithInt:dstPort]])
-            {
-                Probe* existingProbe = self.probesByDstUDPPort[portKey];
-                if (existingProbe.complete)
-                {
-                    // Good, we can reuse this port.
-                    [self resetProbe:existingProbe.hostIdentifier allowRemovalOfInflightProbes:NO];
-                }
-                else
-                {
-                    dstPort = 0;
-                }
-            }
-            
-            attempts++;
-        } while ( ! dstPort && attempts < kMaxAttemptsToFindUnusedPort);
-
+        uint16_t dstPort = [self generateDestinationPortForProbe];
         if ( ! dstPort)
         {
             NSLog(@"Could not send probe to %@ as an unused UDP port is not available", ipAddress);
@@ -189,6 +191,7 @@ struct payload
         probe.dstPort = dstPort;
         probe.sequenceNumber = 0;
         probe.currentTTL = 1;
+        probe.retries = 0;
         probe.complete = NO;
         probe.completionBlock = completionBlock;
         
@@ -367,7 +370,7 @@ struct payload
         if (icmpRecvHdr->icmp_type == ICMP_TIMXCEED)
         {
             // We hit a router, keep going.
-            if ([self sendPortUnreachableUDPPacketToIPAddress:probe.hostIdentifier onCompletion:nil] != kError)
+            if ([self sendPortUnreachableUDPPacketToIPAddress:probe.hostIdentifier onCompletion:nil retrying:NO] != kError)
             {
                 return kNextHopIsRouter;
             }
@@ -420,11 +423,46 @@ struct payload
         }
         else if ([self msElapsedBetween:probe.timeSent endTime:now] > kMaxProbeFlightTimeMs)
         {
-            // @todo: timeout could be due to simple one off UDP packet loss, add in a retry feature
-            NSLog(@"Removing timed out probe %@", probe.hostIdentifier);
-            [self resetProbe:probe.hostIdentifier allowRemovalOfInflightProbes:YES];
+            // This will remove the probe if the number of retries has been exceeded
+            NSLog(@"Retry (%d) for hop %u for timed out probe %@", probe.retries + 1, probe.currentTTL, probe.hostIdentifier);
+            [self sendProbe:probe.hostIdentifier onCompletion:probe.completionBlock retrying:YES];
+            
+            if (kCompleteTimedOutProbes)
+            {
+                // @todo: when a probe is marked as "retries exceeded" we can complete it (ie. use whatever hop count we got to)
+            }
         }
     }
+}
+
+- (uint16_t)generateDestinationPortForProbe
+{
+    uint16_t dstPort, attempts = 0;
+    
+    do
+    {
+        dstPort = kBaseUDPPort + (arc4random() % (65535 - kBaseUDPPort));
+        NSNumber *portKey = [NSNumber numberWithInt:dstPort];
+        
+        // Have we already sent a probe to this port? If so, we can only reuse it if the probe is complete.
+        if (self.probesByDstUDPPort[[NSNumber numberWithInt:dstPort]])
+        {
+            Probe* existingProbe = self.probesByDstUDPPort[portKey];
+            if (existingProbe.complete)
+            {
+                // Good, we can reuse this port.
+                [self resetProbe:existingProbe.hostIdentifier allowRemovalOfInflightProbes:NO];
+            }
+            else
+            {
+                dstPort = 0;
+            }
+        }
+        
+        attempts++;
+    } while ( ! dstPort && attempts < kMaxAttemptsToFindUnusedPort);
+
+    return dstPort;
 }
 
 @end

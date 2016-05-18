@@ -18,6 +18,7 @@
 @property (nonatomic) float rttToHost;
 @property (nonatomic) uint16_t dstPort;
 @property (nonatomic) struct timeval timeSent;
+@property (nonatomic) uint8_t retries;
 @property (nonatomic) BOOL inflight;
 @property (nonatomic) BOOL complete;
 @property (nonatomic, copy) void (^completionBlock)(Probe*);
