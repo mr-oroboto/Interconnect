@@ -23,6 +23,7 @@
 #define kEnableFPSLog NO
 #define kNodeRadiusGrowthPerSecond 0.7
 #define kNodeVolumeGrowthPerSecond 0.08
+#define kWorldAutoRotationUnitsPerSecond 3
 #define kNodePulseDeclinePerSecond 0.6                  // @todo: use sin / swing non-linear transition
 #define kNodeMinimumColourIntensity 0.2
 #define kNodeMinimumPulseIntensity 0.4
@@ -45,13 +46,14 @@
 @property (nonatomic) GLfloat translateZ;               // translation on Z-axis (movement through space)
 @property (nonatomic) GLfloat worldRotateY;
 @property (nonatomic) GLfloat worldRotateX;
+@property (nonatomic) GLfloat worldAutoRotation;
 @property (nonatomic) NSPoint trackingMousePosition;
 @property (nonatomic) BOOL picking;
 @property (nonatomic) Host* previousSelection;
 @property (nonatomic) NSUInteger lastNodeCount;
 @property (nonatomic) double fps;
 @property (nonatomic) NSUInteger colourationMode;
-@property (nonatomic) NSUInteger groupingStrategy;
+@property (nonatomic) HostStoreGroupingStrategy groupingStrategy;
 @property (nonatomic) float nodeRadiusGrowthPerSecond;
 
 @property (nonatomic) GLuint displayListNode;           // display list for node objects
@@ -81,6 +83,7 @@
     // "World" movement (spin world around origin)
     _worldRotateX = 0;
     _worldRotateY = 0;
+    _worldAutoRotation = YES;
     
     _picking = NO;
     
@@ -464,6 +467,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 - (void)drawNodeSphere:(double)secondsSinceLastFrame
 {
     glClearColor(0,0,0,0);
+    
+    if (self.worldAutoRotation)
+    {
+        self.worldRotateY += kWorldAutoRotationUnitsPerSecond * secondsSinceLastFrame;
+    }
     
     //
     // Simulate movement of the camera by rotating and translating the model view in the opposite way to the "camera" (our PoV)
