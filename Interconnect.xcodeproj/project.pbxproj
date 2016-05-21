@@ -28,6 +28,8 @@
 		60D3B6331CE7FDC000447CD6 /* ICMPEchoProbeThread.m in Sources */ = {isa = PBXBuildFile; fileRef = 60D3B6321CE7FDC000447CD6 /* ICMPEchoProbeThread.m */; };
 		60D3B6361CE7FFF900447CD6 /* Probe.m in Sources */ = {isa = PBXBuildFile; fileRef = 60D3B6351CE7FFF900447CD6 /* Probe.m */; };
 		60D8D4D41CBB7A79006ADE15 /* libpcap.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 60D8D4D31CBB7A79006ADE15 /* libpcap.tbd */; };
+		60DEC3881CF03C0100617C4F /* HelpSheet.xib in Resources */ = {isa = PBXBuildFile; fileRef = 60DEC3871CF03C0100617C4F /* HelpSheet.xib */; };
+		60DEC38B1CF03CE400617C4F /* HelpSheetController.m in Sources */ = {isa = PBXBuildFile; fileRef = 60DEC38A1CF03CE400617C4F /* HelpSheetController.m */; };
 		60ECFE691CCD8471006420D4 /* func_common.inl in Resources */ = {isa = PBXBuildFile; fileRef = 60ECFD711CCD8471006420D4 /* func_common.inl */; };
 		60ECFE6A1CCD8471006420D4 /* func_exponential.inl in Resources */ = {isa = PBXBuildFile; fileRef = 60ECFD731CCD8471006420D4 /* func_exponential.inl */; };
 		60ECFE6B1CCD8471006420D4 /* func_geometric.inl in Resources */ = {isa = PBXBuildFile; fileRef = 60ECFD751CCD8471006420D4 /* func_geometric.inl */; };
@@ -184,6 +186,9 @@
 		60D3B6371CE801D400447CD6 /* ProbeThread+Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ProbeThread+Private.h"; sourceTree = "<group>"; };
 		60D3B6381CE80AF200447CD6 /* ProbeThread+ProbeInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ProbeThread+ProbeInterface.h"; sourceTree = "<group>"; };
 		60D8D4D31CBB7A79006ADE15 /* libpcap.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libpcap.tbd; path = usr/lib/libpcap.tbd; sourceTree = SDKROOT; };
+		60DEC3871CF03C0100617C4F /* HelpSheet.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpSheet.xib; sourceTree = "<group>"; };
+		60DEC3891CF03CE400617C4F /* HelpSheetController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HelpSheetController.h; sourceTree = "<group>"; };
+		60DEC38A1CF03CE400617C4F /* HelpSheetController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HelpSheetController.m; sourceTree = "<group>"; };
 		60ECFD671CCD8471006420D4 /* common.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = common.hpp; sourceTree = "<group>"; };
 		60ECFD691CCD8471006420D4 /* _features.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = _features.hpp; sourceTree = "<group>"; };
 		60ECFD6A1CCD8471006420D4 /* _fixes.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = _fixes.hpp; sourceTree = "<group>"; };
@@ -481,6 +486,7 @@
 				600333551CBA0673007BA868 /* AppDelegate.m */,
 				6003335A1CBA0673007BA868 /* Assets.xcassets */,
 				6003335C1CBA0673007BA868 /* MainMenu.xib */,
+				60DEC3871CF03C0100617C4F /* HelpSheet.xib */,
 				6003335F1CBA0673007BA868 /* Info.plist */,
 				600333571CBA0673007BA868 /* Supporting Files */,
 			);
@@ -502,6 +508,8 @@
 				60CF9C881CC8C01D00E28888 /* NSFont_OpenGL.m */,
 				600333671CBA06B8007BA868 /* OpenGLView.h */,
 				600333681CBA06B8007BA868 /* OpenGLView.mm */,
+				60DEC3891CF03CE400617C4F /* HelpSheetController.h */,
+				60DEC38A1CF03CE400617C4F /* HelpSheetController.m */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -921,6 +929,7 @@
 				60ECFE6E1CCD8471006420D4 /* func_packing.inl in Resources */,
 				60ECFE6A1CCD8471006420D4 /* func_exponential.inl in Resources */,
 				60ECFEAE1CCD8471006420D4 /* gradient_paint.inl in Resources */,
+				60DEC3881CF03C0100617C4F /* HelpSheet.xib in Resources */,
 				60ECFE741CCD8471006420D4 /* intrinsic_geometric.inl in Resources */,
 				60ECFEA91CCD8471006420D4 /* extend.inl in Resources */,
 				60ECFE8E1CCD8471006420D4 /* color_space.inl in Resources */,
@@ -1036,6 +1045,7 @@
 				6040C9721CD2C22400484468 /* ICMPEchoProbe.m in Sources */,
 				6082E4841CDB3637005D3A14 /* HostResolver.m in Sources */,
 				60ECFE711CCD8471006420D4 /* glm.cpp in Sources */,
+				60DEC38B1CF03CE400617C4F /* HelpSheetController.m in Sources */,
 				607578591CEA964900C33885 /* ICMPTimeExceededProbeThread.m in Sources */,
 				60D3B6361CE7FFF900447CD6 /* Probe.m in Sources */,
 				602A9FD31CC1AC360051CFEF /* Host.m in Sources */,

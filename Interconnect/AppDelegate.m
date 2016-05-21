@@ -10,12 +10,14 @@
 #import "HostStore.h"
 #import "Host.h"
 #import "CaptureWorker.h"
-#import "ICMPEchoProbeThread.h"
+#import "ICMPTimeExceededProbeThread.h"
+#import "HelpSheetController.h"
 
 @interface AppDelegate ()
 
 @property (weak) IBOutlet NSWindow *window;
 @property (nonatomic, strong) ProbeThread* thread;
+@property (nonatomic, strong) HelpSheetController* helpSheet;
 
 @end
 
@@ -25,24 +27,24 @@
 {
     CaptureWorker* worker = [[CaptureWorker alloc] init];
 //  [self createSampleData];
-//  [worker startCapture];
+    [worker startCapture];
 
-    NSLog(@"main thread: %@", [NSThread currentThread]);
-    
-    [NSTimer scheduledTimerWithTimeInterval:2 target:self selector:@selector(sampleOrbitalChange) userInfo:nil repeats:NO];
-
-    _thread = [[ICMPEchoProbeThread alloc] init];
-    [self.thread start];
-    [self.thread queueProbeForHost:@"203.9.148.2"];
-    [self.thread queueProbeForHost:@"216.58.199.68"];
-    [self.thread queueProbeForHost:@"150.101.161.8"];
-    [self.thread queueProbeForHost:@"150.107.72.65"];
-    [self.thread queueProbeForHost:@"189.113.174.199"];
+    return;
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification
 {
     // Insert code here to tear down your application
+}
+
+- (IBAction)displayHelpSheet:(id)sender
+{
+    if ( ! self.helpSheet)
+    {
+        self.helpSheet = [[HelpSheetController alloc] initWithWindowNibName:@"HelpSheet"];
+    }
+    
+    [self.helpSheet displayModallyInWindow:self.window];
 }
 
 #pragma mark - Demo
@@ -74,8 +76,7 @@
 
 - (void)sampleOrbitalChange
 {
-    [self.thread processHostQueue];
-//  [[HostStore sharedStore] updateHost:@"1.128" withGroup:5];
+    [[HostStore sharedStore] updateHost:@"1.128" withGroup:5];
 }
 
 @end
