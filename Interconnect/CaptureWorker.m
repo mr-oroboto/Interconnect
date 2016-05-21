@@ -322,7 +322,7 @@
                 
                 if (rttToHost > 0)
                 {
-                    [[HostStore sharedStore] updateHost:ipAddress withRTT:rttToHost];
+                    [[HostStore sharedStore] updateHost:ipAddress withRTT:rttToHost andHopCount:-1];
                 }
                 else
                 {
@@ -336,9 +336,9 @@
                 ICMPTimeExceededProbe* probe = [ICMPTimeExceededProbe probeWithIPAddress:ipAddress];
                 NSInteger hopCount = [probe measureHopCount];
                 
-                if (hopCount >= 0)
+                if (hopCount > 0)
                 {
-                    [[HostStore sharedStore] updateHost:ipAddress withHopCount:hopCount];
+                    [[HostStore sharedStore] updateHost:ipAddress withRTT:0 andHopCount:hopCount];
                 }
                 else
                 {
@@ -356,12 +356,12 @@
                 if (self.probeType == kProbeTypeThreadTraceroute && probe.currentTTL > 0)
                 {
                     NSLog(@"Updating %@ with hop count %u from probe", probe.hostIdentifier, probe.currentTTL);
-                    [[HostStore sharedStore] updateHost:probe.hostIdentifier withHopCount:probe.currentTTL];
+                    [[HostStore sharedStore] updateHost:probe.hostIdentifier withRTT:probe.rttToHost andHopCount:probe.currentTTL];
                 }
                 else if (self.probeType == kProbeTypeThreadICMPEcho && probe.rttToHost > 0)
                 {
                     NSLog(@"Updating %@ with RTT %.2fms from probe", probe.hostIdentifier, probe.rttToHost);
-                    [[HostStore sharedStore] updateHost:probe.hostIdentifier withRTT:probe.rttToHost];
+                    [[HostStore sharedStore] updateHost:probe.hostIdentifier withRTT:probe.rttToHost andHopCount:-1];
                 }
             };
             

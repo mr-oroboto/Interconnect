@@ -12,13 +12,15 @@
 
 #import "NodeStore.h"
 
-#define kHostStoreGroupBasedOnHopCount 0
-#define kHostStoreGroupBasedOnRTT 1
-#define kHostStoreGroupBasedOnAS 2
+typedef enum {
+    kHostStoreGroupBasedOnHopCount = 0,
+    kHostStoreGroupBasedOnRTT,
+    kHostStoreGroupBasedOnAS
+} HostStoreGroupingStrategy;
 
 @interface HostStore : NodeStore
 
-@property (nonatomic) NSUInteger groupingStrategy;
+@property (nonatomic) HostStoreGroupingStrategy groupingStrategy;
 
 + (instancetype)sharedStore;
 
@@ -26,9 +28,8 @@
 - (void)updateHost:(NSString*)identifier withGroup:(NSUInteger)group;
 - (void)updateHost:(NSString*)identifier withName:(NSString*)name;
 - (void)updateHost:(NSString*)identifier withAS:(NSString*)as andASDescription:(NSString*)asDesc;
-- (void)updateHost:(NSString*)identifier withRTT:(float)rtt;
-- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount;
+- (void)updateHost:(NSString*)identifier withRTT:(float)rtt andHopCount:(NSUInteger)hopCount;
 - (void)recalculateHostSizesBasedOnBytesTransferred;
-- (void)regroupHostsBasedOnStrategy:(NSUInteger)strategy;
+- (void)regroupHostsBasedOnStrategy:(HostStoreGroupingStrategy)strategy;
 
 @end

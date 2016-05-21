@@ -216,44 +216,36 @@
     }
 }
 
-- (void)updateHost:(NSString*)identifier withRTT:(float)rtt
+- (void)updateHost:(NSString*)identifier withRTT:(float)rtt andHopCount:(NSInteger)hopCount
 {
     [self lockStore];
     
     Host* host = (Host*)[self node:identifier];
     if (host)
     {
-        host.rtt = rtt;
+        if (rtt > 0)
+        {
+            host.rtt = rtt;
+        }
+        
+        if (hopCount > 0)
+        {
+            host.hopCount = hopCount;
+        }
     }
     
     [self unlockStore];
 
-    if (self.groupingStrategy == kHostStoreGroupBasedOnRTT)
+    if (rtt > 0 && self.groupingStrategy == kHostStoreGroupBasedOnRTT)
     {
         NSUInteger hostGroup = [self hostGroupBasedOnRTT:rtt];
         NSLog(@"Updating host %@ group to %lu based on RTT of %.2fms", identifier, hostGroup, rtt);
         [self updateHost:identifier withGroup:hostGroup];
     }
-}
-
-- (void)updateHost:(NSString*)identifier withHopCount:(NSUInteger)hopCount
-{
-    ++hopCount;
-    
-    [self lockStore];
-    
-    Host* host = (Host*)[self node:identifier];
-    if (host)
-    {
-        host.hopCount = hopCount;
-    }
-    
-    [self unlockStore];
-    
-    if (self.groupingStrategy == kHostStoreGroupBasedOnHopCount)
+    else if (hopCount > 0 && self.groupingStrategy == kHostStoreGroupBasedOnHopCount)
     {
         NSUInteger hostGroup = [self hostGroupBasedOnHopCount:hopCount];
-        NSLog(@"Updating host %@ group to %ld based on hop count %ld", identifier, hostGroup, (hopCount - 1));
+        NSLog(@"Updating host %@ group to %ld based on hop count %ld", identifier, hostGroup, hopCount);
         [self updateHost:identifier withGroup:hostGroup];
     }
 }
@@ -317,10 +309,8 @@
     [self unlockStore];
 }
 
-- (void)regroupHostsBasedOnStrategy:(NSUInteger)strategy
+- (void)regroupHostsBasedOnStrategy:(HostStoreGroupingStrategy)strategy
 {
-    BOOL validStrategy = NO;
-    
     [self lockStore];
     
     NSDictionary* hosts = [self nodes];
@@ -333,17 +323,14 @@
         switch (strategy)
         {
             case kHostStoreGroupBasedOnHopCount:
-                validStrategy = YES;
                 hostGroup = [self hostGroupBasedOnHopCount:host.hopCount];
                 break;
                 
             case kHostStoreGroupBasedOnRTT:
-                validStrategy = YES;
                 hostGroup = [self hostGroupBasedOnRTT:host.rtt];
                 break;
                 
             case kHostStoreGroupBasedOnAS:
-                validStrategy = YES;
                 hostGroup = [self hostGroupBasedOnAS:host.autonomousSystem];
                 break;
                 
@@ -354,10 +341,7 @@
         [super updateNode:host withOrbital:hostGroup];
     }
 
-    if (validStrategy)
-    {
-        self.groupingStrategy = strategy;
-    }
+    self.groupingStrategy = strategy;
 
     [self unlockStore];
 }
