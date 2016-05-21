@@ -22,21 +22,25 @@
 #import "HostResolver.h"
 
 #define kLogTraffic NO
-#define kMaxConcurrentResolutionTasks   5
-#define kRecalculateHostSizeEachSecs 10000
+#define kMaxConcurrentResolutionTasks   5                   // how many name resolution threads can run concurrently?
+#define kRecalculateHostSizePeriodMs 10000                  // recalculate how big hosts should be (based on bytes transferred) this often
 
 @interface CaptureWorker ()
 
 @property (nonatomic) BOOL stopWorker;                      // set from main, read from worker
 @property (nonatomic) BOOL workerRunning;                   // set from worker, read from main
-@property (nonatomic) dispatch_queue_t captureQueue;
-@property (nonatomic) dispatch_queue_t probeQueue;          // serialise probes
+
+@property (nonatomic) dispatch_queue_t captureQueue;        // libpcap runs here
+@property (nonatomic) dispatch_queue_t probeQueue;          // serialise probes that require it (legacy ICMP echo & traceroute)
 @property (nonatomic) NSOperationQueue* resolverQueue;      // allows multiple concurrent resolutions
+
 @property (nonatomic) bpf_u_int32 interfaceAddress;         // IPv4 address of capture interface
 @property (nonatomic) bpf_u_int32 interfaceMask;            // IPv4 netmask of capture interface
-@property (nonatomic) NSUInteger probeType;
+
+@property (nonatomic) ProbeType probeType;                  // how should newly discovered hosts be probed?
+@property (nonatomic) ProbeThread* probeThread;             // for threaded probes
+
 @property (nonatomic) float msSinceLastHostResize;
-@property (nonatomic) ProbeThread* probeThread;
 
 @end
 
@@ -48,22 +52,21 @@
     {
         _workerRunning = NO;
         _stopWorker = NO;
-        _msSinceLastHostResize = 0;
-        _probeType = kProbeTypeTraceroute;
-//      _probeType = kProbeTypeICMPEcho;
-        _probeType = kProbeTypeThreadICMPEcho;
 
         // Ensure our header definitions will work
         if (sizeof(unsigned short) != 2)
         {
             [NSException raise:@"Expected unsigned short to be 2 bytes" format:@""];
         }
-
+        
         if (sizeof(unsigned int) != 4)
         {
             [NSException raise:@"Expected unsigned int to be 4 bytes" format:@""];
         }
+
+        _msSinceLastHostResize = 0;
         
+        _probeType = kProbeTypeThreadTraceroute;
         _probeQueue = nil;
         _probeThread = nil;
         
@@ -105,19 +108,19 @@
 
 - (void)stopCapture
 {
-    _stopWorker = YES;
+    self.stopWorker = YES;
 }
 
 - (void)startCapture
 {
-    _stopWorker = NO;
+    self.stopWorker = NO;
     
     void (^completionBlock)() = ^() {
         NSLog(@"captureBlock finished on thread %@", [NSThread currentThread]);
     };
     
     void (^captureBlock)() = ^() {
-        _workerRunning = YES;
+        self.workerRunning = YES;
         
         NSLog(@"captureBlock started on thread %@", [NSThread currentThread]);
         
@@ -145,7 +148,7 @@
         ioctl(fd, SIOCGIFADDR, &ifr);
         close(fd);
 
-        _interfaceAddress = ((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr.s_addr;
+        self.interfaceAddress = ((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr.s_addr;
         NSLog(@"Opened [%s (%s)] for live capture", device, inet_ntoa(((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr));
         
         if ( ! (capture_handle = pcap_open_live("en0", 4096 /* snaplen: max bytes to capture */, 1 /* promisc */, 0 /* to_ms: infinite */, errbuf)))
@@ -167,7 +170,7 @@
                 
                 struct timeval timeStart, timeEnd;
                 
-                while ( ! _stopWorker)
+                while ( ! self.stopWorker)
                 {
                     gettimeofday(&timeStart, NULL);
 
@@ -177,7 +180,7 @@
                     gettimeofday(&timeEnd, NULL);
 
                     self.msSinceLastHostResize += [self msElapsedBetween:&timeStart endTime:&timeEnd];
-                    if (self.msSinceLastHostResize >= kRecalculateHostSizeEachSecs)
+                    if (self.msSinceLastHostResize >= kRecalculateHostSizePeriodMs)
                     {
                         [self recalculateHostSizes];
                     }
@@ -193,7 +196,7 @@
         
         NSLog(@"captureBlock exiting");
         
-        _workerRunning = NO;
+        self.workerRunning = NO;
         
         dispatch_async(dispatch_get_main_queue(), completionBlock);
     };
@@ -305,68 +308,72 @@
 
 - (void)updateHost:(NSString*)ipAddress addBytesToUs:(NSUInteger)bytesToUs addBytesFromUs:(NSUInteger)bytesFromUs port:(NSUInteger)port
 {
-    if ([[HostStore sharedStore] updateHostBytesTransferred:ipAddress addBytesIn:bytesFromUs addBytesOut:bytesToUs port:port])
+    BOOL hostIsNew = [[HostStore sharedStore] updateHostBytesTransferred:ipAddress addBytesIn:bytesFromUs addBytesOut:bytesToUs port:port];
+    
+    if ( ! hostIsNew)
     {
-        // First time we've seen this host, resolve its name and send off a probe to work out what its orbital should be.
-        NSInvocationOperation* resolverOperation = [[NSInvocationOperation alloc] initWithTarget:self selector:@selector(resolveHostDetailsForAddress:) object:ipAddress];
-        [self.resolverQueue addOperation:resolverOperation];
+        return;
+    }
+    
+    // First time we've seen this host, resolve its name and send off a probe to work out what its orbital should be.
+    NSInvocationOperation* resolverOperation = [[NSInvocationOperation alloc] initWithTarget:self selector:@selector(resolveHostDetailsForAddress:) object:ipAddress];
+    [self.resolverQueue addOperation:resolverOperation];
 
-        if (self.probeType == kProbeTypeICMPEcho)
-        {
-            // Using a "connected" SOCK_DGRAM for ICMP echos does not demultiplex ICMP echo responses from different
-            // hosts to the "right" socket. Until the ICMP echo probe is implemented as a single thread that consumes
-            // multiple probe requests at once (and resolves them out of order) the ICMP echo task must be serialised.
-            dispatch_async(_probeQueue, ^{
-                ICMPEchoProbe* probe = [ICMPEchoProbe probeWithIPAddress:ipAddress];
-                float rttToHost = [probe measureAverageRTT];
-                
-                if (rttToHost > 0)
-                {
-                    [[HostStore sharedStore] updateHost:ipAddress withRTT:rttToHost andHopCount:-1];
-                }
-                else
-                {
-                    NSLog(@"Failed to get average RTT to %@", ipAddress);
-                }
-            });
-        }
-        else if (self.probeType == kProbeTypeTraceroute)
-        {
-            dispatch_async(_probeQueue, ^{
-                ICMPTimeExceededProbe* probe = [ICMPTimeExceededProbe probeWithIPAddress:ipAddress];
-                NSInteger hopCount = [probe measureHopCount];
-                
-                if (hopCount > 0)
-                {
-                    [[HostStore sharedStore] updateHost:ipAddress withRTT:0 andHopCount:hopCount];
-                }
-                else
-                {
-                    NSLog(@"Failed to get hop count to %@", ipAddress);
-                }
-            });
-        }
-        else if (self.probeType == kProbeTypeThreadICMPEcho || self.probeType == kProbeTypeThreadTraceroute)
-        {
-            /**
-             * This block will be called on the probe thread itself, which is important because only that thread
-             * can clean up (and invalidate) probe objects.
-             */
-            void (^probeFinishedBlock)(Probe*) = ^void(Probe* probe) {
-                if (self.probeType == kProbeTypeThreadTraceroute && probe.currentTTL > 0)
-                {
-                    NSLog(@"Updating %@ with hop count %u from probe", probe.hostIdentifier, probe.currentTTL);
-                    [[HostStore sharedStore] updateHost:probe.hostIdentifier withRTT:probe.rttToHost andHopCount:probe.currentTTL];
-                }
-                else if (self.probeType == kProbeTypeThreadICMPEcho && probe.rttToHost > 0)
-                {
-                    NSLog(@"Updating %@ with RTT %.2fms from probe", probe.hostIdentifier, probe.rttToHost);
-                    [[HostStore sharedStore] updateHost:probe.hostIdentifier withRTT:probe.rttToHost andHopCount:-1];
-                }
-            };
+    if (self.probeType == kProbeTypeICMPEcho)
+    {
+        // Using a "connected" SOCK_DGRAM for ICMP echos does not demultiplex ICMP echo responses from different
+        // hosts to the "right" socket. Until the ICMP echo probe is implemented as a single thread that consumes
+        // multiple probe requests at once (and resolves them out of order) the ICMP echo task must be serialised.
+        dispatch_async(_probeQueue, ^{
+            ICMPEchoProbe* probe = [ICMPEchoProbe probeWithIPAddress:ipAddress];
+            float rttToHost = [probe measureAverageRTT];
             
-            [self.probeThread queueProbeForHost:ipAddress withPriority:YES onCompletion:probeFinishedBlock];
-        }
+            if (rttToHost > 0)
+            {
+                [[HostStore sharedStore] updateHost:ipAddress withRTT:rttToHost andHopCount:-1];
+            }
+            else
+            {
+                NSLog(@"Failed to get average RTT to %@", ipAddress);
+            }
+        });
+    }
+    else if (self.probeType == kProbeTypeTraceroute)
+    {
+        dispatch_async(_probeQueue, ^{
+            ICMPTimeExceededProbe* probe = [ICMPTimeExceededProbe probeWithIPAddress:ipAddress];
+            NSInteger hopCount = [probe measureHopCount];
+            
+            if (hopCount > 0)
+            {
+                [[HostStore sharedStore] updateHost:ipAddress withRTT:0 andHopCount:hopCount];
+            }
+            else
+            {
+                NSLog(@"Failed to get hop count to %@", ipAddress);
+            }
+        });
+    }
+    else if (self.probeType == kProbeTypeThreadICMPEcho || self.probeType == kProbeTypeThreadTraceroute)
+    {
+        /**
+         * This block will be called on the probe thread itself, which is important because only that thread
+         * can clean up (and invalidate) probe objects.
+         */
+        void (^probeFinishedBlock)(Probe*) = ^void(Probe* probe) {
+            if (self.probeType == kProbeTypeThreadTraceroute && probe.currentTTL > 0)
+            {
+                NSLog(@"Updating %@ with hop count %u from probe", probe.hostIdentifier, probe.currentTTL);
+                [[HostStore sharedStore] updateHost:probe.hostIdentifier withRTT:probe.rttToHost andHopCount:probe.currentTTL];
+            }
+            else if (self.probeType == kProbeTypeThreadICMPEcho && probe.rttToHost > 0)
+            {
+                NSLog(@"Updating %@ with RTT %.2fms from probe", probe.hostIdentifier, probe.rttToHost);
+                [[HostStore sharedStore] updateHost:probe.hostIdentifier withRTT:probe.rttToHost andHopCount:-1];
+            }
+        };
+        
+        [self.probeThread queueProbeForHost:ipAddress withPriority:YES onCompletion:probeFinishedBlock];
     }
 }
 

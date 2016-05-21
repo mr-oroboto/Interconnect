@@ -12,7 +12,8 @@
 
 #import "NodeStore.h"
 
-typedef enum {
+typedef enum
+{
     kHostStoreGroupBasedOnHopCount = 0,
     kHostStoreGroupBasedOnRTT,
     kHostStoreGroupBasedOnAS

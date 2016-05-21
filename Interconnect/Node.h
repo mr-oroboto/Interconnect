@@ -11,15 +11,22 @@
 @interface Node : NSObject
 
 @property (nonatomic, readonly) NSString* identifier;
+
 @property (nonatomic) NSUInteger orbital;
 @property (nonatomic) float radius;
+
 @property (nonatomic) float targetVolume;
 @property (nonatomic) float volume;
+
 @property (nonatomic) float rotation;
+
 @property (nonatomic) BOOL selected;
+
 @property (nonatomic) float pulseIntensity;
 @property (nonatomic) BOOL pulseBegin;
+
 @property (nonatomic) float originConnector;
+
 @property (nonatomic) float preferredRed;
 @property (nonatomic) float preferredGreen;
 @property (nonatomic) float preferredBlue;

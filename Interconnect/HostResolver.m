@@ -49,7 +49,7 @@
     
     if (getnameinfo((const struct sockaddr*)&saddr, saddr.sin_len, hostname, sizeof(hostname), NULL, 0, NI_NOFQDN | NI_NAMEREQD) != 0)
     {
-        NSLog(@"Could not resolve IP address [%@]", self.ipAddress);
+//      NSLog(@"Could not resolve IP address [%@]", self.ipAddress);
         return @"";
     }
     
@@ -78,7 +78,7 @@
             [NSException raise:@"" format:@"Unable to create stream pair for socket"];
         }
         
-        NSInputStream* streamIn = CFBridgingRelease(cfStreamRead);   // let ARC take ownership of CF stream, no need to release it now
+        NSInputStream* streamIn = CFBridgingRelease(cfStreamRead);    // let ARC take ownership of CF stream, no need to release it now
         NSOutputStream* streamOut = CFBridgingRelease(cfStreamWrite); // as above
         
         [streamIn open];

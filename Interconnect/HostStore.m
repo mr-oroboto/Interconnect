@@ -10,17 +10,22 @@
 #import "Node.h"
 #import "Host.h"
 
-#define kMaxVolume  0.3
-#define kMinVolume  0.05
-#define kPreferredColourBasedProtocol 0
-#define kPreferredColourBaseAS 1
-#define kMaxHostGroups 12
+#define kMaxVolume      0.3
+#define kMinVolume      0.05
+#define kMaxHostGroups  12
+
+typedef enum
+{
+    kPreferredColourBasedProtocol = 0,      // set node preferred colour based on first protocol we saw it use
+    kPreferredColourBaseAS                  // set node preferred colour based on its AS (@todo)
+} PreferredColourMode;
 
 @interface HostStore ()
 
-@property (nonatomic) NSUInteger largestBytesSeen;
-@property (nonatomic) NSInteger preferredColorMode;
-@property (nonatomic) NSDictionary* protocolColourMap;
+@property (nonatomic) NSUInteger largestBytesSeen;              // what is the largest number of bytes we seen a host transfer? (used for sizing)
+
+@property (nonatomic) PreferredColourMode preferredColorMode;   // how should a host's preferred colour be set?
+@property (nonatomic) NSDictionary* protocolColourMap;          // when colouring based on protocol, use these colours
 
 @end
 
@@ -50,7 +55,7 @@
 {
     if (self = [super init])
     {
-        _largestBytesSeen = 0.0;
+        _largestBytesSeen = 0;
 
         _protocolColourMap = @{
                                @0:   @[@0.3, @0.3, @0.3],         // non-TCP
@@ -127,9 +132,9 @@
      */
 
     NSUInteger totalBytesTransferredByNode = [host bytesTransferred] + bytesIn + bytesOut;
-    if ( ! _largestBytesSeen || totalBytesTransferredByNode > _largestBytesSeen)
+    if ( ! self.largestBytesSeen || totalBytesTransferredByNode > self.largestBytesSeen)
     {
-        _largestBytesSeen = totalBytesTransferredByNode;    // first host or newest largest host
+        self.largestBytesSeen = totalBytesTransferredByNode;    // first host or newest largest host
 //      NSLog(@"New largest bytes seen: %lu for host %@", (unsigned long)_largestBytesSeen, identifier);
     }
     
@@ -139,7 +144,7 @@
     
 //  NSLog(@"Host %@ sent us %lu bytes and received %lu bytes from us", identifier, [host bytesSent], [host bytesReceived]);
     
-    float volume = (totalBytesTransferredByNode / _largestBytesSeen) * kMaxVolume;
+    float volume = (totalBytesTransferredByNode / self.largestBytesSeen) * kMaxVolume;
     
     if (volume < kMinVolume)
     {
@@ -169,7 +174,7 @@
     {
         Host* host = hosts[hostIdentifier];
         
-        float volume = ([host bytesTransferred] / _largestBytesSeen) * kMaxVolume;
+        float volume = ([host bytesTransferred] / self.largestBytesSeen) * kMaxVolume;
             
         if (volume < kMinVolume)
         {

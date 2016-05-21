@@ -32,8 +32,11 @@
 #define kError                                 -1
 #define kSuccess                                0
 
-#define kNextHopIsDestination                   0
-#define kNextHopIsRouter                        1
+typedef enum
+{
+    kNextHopIsDestination = 0,
+    kNextHopIsRouter
+} NextHopType;
 
 #pragma pack(1)
 struct payload

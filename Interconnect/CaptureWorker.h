@@ -8,10 +8,13 @@
 
 #import <Cocoa/Cocoa.h>
 
-#define kProbeTypeICMPEcho          0
-#define kProbeTypeTraceroute        1
-#define kProbeTypeThreadICMPEcho    2
-#define kProbeTypeThreadTraceroute  3
+typedef enum
+{
+    kProbeTypeICMPEcho = 0,
+    kProbeTypeTraceroute,
+    kProbeTypeThreadICMPEcho,
+    kProbeTypeThreadTraceroute
+} ProbeType;
 
 @interface CaptureWorker : NSObject
 

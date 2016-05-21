@@ -21,39 +21,52 @@
 #define kEnableVerticalSync NO
 #define kEnablePerspective YES
 #define kEnableFPSLog NO
-#define kNodeRadiusGrowthPerSecond 0.7
-#define kNodeVolumeGrowthPerSecond 0.08
-#define kWorldAutoRotationUnitsPerSecond 3
+
+#define kNodeRadiusGrowthPerSecond 0.7                  // how fast do nodes initially change orbitals?
+#define kNodeRadiusGrowthPerSecondAccelerated 1.2       // how fast do nodes change orbitals when grouping strategy is changed?
+#define kNodeVolumeGrowthPerSecond 0.08                 // how fast do nodes grow and shrink based on their volume?
+#define kWorldAutoRotationUnitsPerSecond 3              // how fast does the world automatically rotate around Y-axis?
+
 #define kNodePulseDeclinePerSecond 0.6                  // @todo: use sin / swing non-linear transition
-#define kNodeMinimumColourIntensity 0.2
+#define kNodeMinimumColourIntensity 0.2                 // nodes cannot have individual RGB values smaller than this
 #define kNodeMinimumPulseIntensity 0.4
+
 #define kDisplayListCountForText 95
+
 #define kCameraInitialX 0
 #define kCameraInitialZ 8
-#define kColourationByOrbital 0
-#define kColourationByPreferredColour 1
+
+typedef enum
+{
+    kColourationByOrbital = 0,                          // colour nodes based on their orbital (itself determined by the grouping strategy)
+    kColourationByPreferredColour                       // colour nodes based on their preferred colour
+} ColourationMode;
 
 @interface OpenGLView()
 
 @property (nonatomic) CVDisplayLinkRef displayLink;     // display link for managing rendering thread
-@property (nonatomic) int64_t lastTicks;
-@property (nonatomic) BOOL isLightOn;
-@property (nonatomic) BOOL isWorldRotating;
+@property (nonatomic) int64_t lastTicks;                // to determine seconds elapsed since last frame drawn
+
+@property (nonatomic) BOOL isLightOn;                   // toggleable option (l)
+@property (nonatomic) BOOL isWorldRotating;             // toggleable option (w)
+@property (nonatomic) BOOL isWorldAutoRotating;         // toggleable option (a)
 
 @property (nonatomic) GLfloat rotateY;                  // rotation around Y-axis (looking left and right: our heading)
 @property (nonatomic) GLfloat rotateX;                  // rotation around X-axis
 @property (nonatomic) GLfloat translateX;               // translation on X-axis (movement through space)
 @property (nonatomic) GLfloat translateZ;               // translation on Z-axis (movement through space)
-@property (nonatomic) GLfloat worldRotateY;
-@property (nonatomic) GLfloat worldRotateX;
-@property (nonatomic) GLfloat worldAutoRotation;
-@property (nonatomic) NSPoint trackingMousePosition;
-@property (nonatomic) BOOL picking;
+@property (nonatomic) GLfloat worldRotateY;             // rotation around Y-axis
+@property (nonatomic) GLfloat worldRotateX;             // rotation around X-axis
+
+@property (nonatomic) NSPoint trackingMousePosition;    // current mouse co-ords for picking and rotation
+@property (nonatomic) BOOL isPicking;
 @property (nonatomic) Host* previousSelection;
-@property (nonatomic) NSUInteger lastNodeCount;
-@property (nonatomic) double fps;
-@property (nonatomic) NSUInteger colourationMode;
-@property (nonatomic) HostStoreGroupingStrategy groupingStrategy;
+
+@property (nonatomic) NSUInteger lastNodeCount;         // for HUD
+@property (nonatomic) double fps;                       // for HUD
+
+@property (nonatomic) ColourationMode colourationMode;              // how should nodes be coloured?
+@property (nonatomic) HostStoreGroupingStrategy groupingStrategy;   // how should nodes be grouped?
 @property (nonatomic) float nodeRadiusGrowthPerSecond;
 
 @property (nonatomic) GLuint displayListNode;           // display list for node objects
@@ -68,9 +81,8 @@
 
 - (void)awakeFromNib
 {
-    NSLog(@"awakeFromNib");
-
     _lastTicks = 0;
+
     _isLightOn = NO;
     _isWorldRotating = NO;
     
@@ -83,11 +95,10 @@
     // "World" movement (spin world around origin)
     _worldRotateX = 0;
     _worldRotateY = 0;
-    _worldAutoRotation = YES;
+    _isWorldAutoRotating = YES;
     
-    _picking = NO;
+    _isPicking = NO;
     
-//  _colourationMode = kColourationByOrbital;
     _colourationMode = kColourationByPreferredColour;
 
     _groupingStrategy = [[HostStore sharedStore] groupingStrategy];
@@ -104,8 +115,6 @@
 
 - (void)prepareOpenGL
 {
-    NSLog(@"prepareOpenGL");
-    
     self.quadric = gluNewQuadric();
     gluQuadricNormals(self.quadric, GLU_SMOOTH);
     
@@ -223,7 +232,12 @@
     }
     else if ([[theEvent characters] isEqualToString:@"w"])
     {
+        self.isWorldAutoRotating = NO;
         self.isWorldRotating = ! self.isWorldRotating;
+    }
+    else if ([[theEvent characters] isEqualToString:@"a"])
+    {
+        self.isWorldAutoRotating = ! self.isWorldAutoRotating;
     }
     else if ([[theEvent characters] isEqualToString:@"g"])
     {
@@ -240,7 +254,7 @@
                 break;
         }
         
-        self.nodeRadiusGrowthPerSecond = 1.2;   // @todo: reset this one the regrouping is complete
+        self.nodeRadiusGrowthPerSecond = kNodeRadiusGrowthPerSecondAccelerated;   // @todo: reset this one the regrouping is complete
         [[HostStore sharedStore] regroupHostsBasedOnStrategy:self.groupingStrategy];
     }
     else if ([[theEvent characters] isEqualToString:@"c"])
@@ -319,12 +333,12 @@
 - (void)mouseDown:(NSEvent *)theEvent
 {
     self.trackingMousePosition = [self convertPoint:[theEvent locationInWindow] fromView:nil];
-    self.picking = YES;
+    self.isPicking = YES;
 }
 
 - (void)mouseUp:(NSEvent*)theEvent
 {
-    self.picking = NO;
+    self.isPicking = NO;
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent
@@ -346,7 +360,7 @@
         self.rotateX -= (deltaY * 0.1f);
     }
     
-    _trackingMousePosition = locationInView;
+    self.trackingMousePosition = locationInView;
 }
 
 #pragma mark - View
@@ -468,7 +482,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 {
     glClearColor(0,0,0,0);
     
-    if (self.worldAutoRotation)
+    if (self.isWorldAutoRotating)
     {
         self.worldRotateY += kWorldAutoRotationUnitsPerSecond * secondsSinceLastFrame;
     }
@@ -480,8 +494,6 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     //       look around) is very different from moving the objects in the world (ie. spinning them around the origin but
     //       perhaps still allowing the X,Y,Z position of the camera to be set.
     //
-    // TODO: Toggle between moving the camera and rotating the objects themselves.
-    //
     
     // This translates the origin (0, 0, 0) to a new origin
     [self translateForCamera];
@@ -490,9 +502,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glRasterPos2f(0.06, 0.06);
     [self glPrint:@"localhost"];
     
-    [self drawNode:nil x:0 y:0 z:0 secondsSinceLastFrame:secondsSinceLastFrame];     // origin marker
+    [self drawNode:nil x:0 y:0 z:0 secondsSinceLastFrame:secondsSinceLastFrame];     // localhost (origin) marker
+
     HostStore *hostStore = [HostStore sharedStore];
     [hostStore lockStore];
+
     NSDictionary* orbitals = [hostStore inhabitedOrbitals];
     NSUInteger orbitalCount = [[orbitals allKeys] count];
 
@@ -611,7 +625,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glRotatef(worldRotateY, 0.0f, 1.0f, 0.0);       // rotation around Y-axis (looking left and right)
     glRotatef(worldRotateX, 1.0f, 0.0f, 0.0);       // rotation around Y-axis (looking left and right)
 
-    if (_picking)
+    if (self.isPicking)
     {
         GLint viewport[4];
         GLdouble modelViewMatrix[16], projectionMatrix[16];
@@ -747,7 +761,12 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glLoadIdentity();
     glColor3f(1, 1, 1);
     glRasterPos3f(5, 15, 0);
-    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@, light: %@, colour: %@, groups: %@]", self.lastNodeCount, self.fps, self.isWorldRotating ? @"world" : @"camera", self.isLightOn ? @"yes" : @"no", self.colourationMode == kColourationByPreferredColour ? @"preferred" : @"orbital", groupingStrategy]];
+    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@, light: %@, colour: %@, groups: %@]",
+                   self.lastNodeCount,
+                   self.fps, self.isWorldRotating ? @"world" : @"camera",
+                   self.isLightOn ? @"yes" : @"no",
+                   self.colourationMode == kColourationByPreferredColour ? @"preferred" : @"orbital",
+                   groupingStrategy]];
     glPopMatrix();
 
     glMatrixMode(GL_PROJECTION);
