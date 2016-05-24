@@ -29,6 +29,7 @@
 #define kMaxProbeFlightTimeMs                   10000
 #define kMaxProbeRetries                        3
 
+#define kRetriesExceeded                       -2
 #define kError                                 -1
 #define kSuccess                                0
 
@@ -91,7 +92,20 @@ struct payload
 
 - (void)sendProbe:(NSString*)toHostIdentifier onCompletion:(void (^)(Probe*))completionBlock retrying:(BOOL)retrying
 {
-    if ([self sendPortUnreachableUDPPacketToIPAddress:toHostIdentifier onCompletion:completionBlock retrying:retrying] == kError)
+    NSInteger sendStatus = [self sendPortUnreachableUDPPacketToIPAddress:toHostIdentifier onCompletion:completionBlock retrying:retrying];
+    
+    if (sendStatus == kRetriesExceeded && kCompleteTimedOutProbes)
+    {
+        Probe* probe = self.probesByHostIdentifier[toHostIdentifier];
+
+        NSLog(@"*** COMPLETING TIMED OUT PROBE to %@", toHostIdentifier);
+        if (probe.completionBlock)
+        {
+            probe.completionBlock(probe);
+        }
+    }
+    
+    if (sendStatus == kRetriesExceeded || sendStatus == kError)
     {
         [self resetProbe:toHostIdentifier allowRemovalOfInflightProbes:YES];
     }
@@ -157,7 +171,7 @@ struct payload
             if (++probe.retries > kMaxProbeRetries)
             {
                 NSLog(@"Retry limit (%d) exceeded for %@", kMaxProbeRetries, probe.hostIdentifier);
-                return kError;
+                return kRetriesExceeded;
             }
             
             // Need to change the destination port in case the response comes back (if it does, we should ignore it)
@@ -176,7 +190,7 @@ struct payload
         if (probe.currentTTL > kMaxProbeTTL)
         {
             NSLog(@"TTL exceeded for %@", probe.hostIdentifier);
-            return kError;
+            return kRetriesExceeded;        // this ensures we complete the probe (if set) at the maximum TTL
         }
     }
     else
@@ -426,14 +440,9 @@ struct payload
         }
         else if ([self msElapsedBetween:probe.timeSent endTime:now] > kMaxProbeFlightTimeMs)
         {
-            // This will remove the probe if the number of retries has been exceeded
+            // This will remove or complete (depending on kCompleteTimedOutProbes) the probe if the number of retries has been exceeded
             NSLog(@"Retry (%d) for hop %u for timed out probe %@", probe.retries + 1, probe.currentTTL, probe.hostIdentifier);
             [self sendProbe:probe.hostIdentifier onCompletion:probe.completionBlock retrying:YES];
-            
-            if (kCompleteTimedOutProbes)
-            {
-                // @todo: when a probe is marked as "retries exceeded" we can complete it (ie. use whatever hop count we got to)
-            }
         }
     }
 }
