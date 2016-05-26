@@ -13,6 +13,7 @@
 #define kMaxVolume      0.3
 #define kMinVolume      0.05
 #define kMaxHostGroups  12
+#define kShowOriginConnectorOnTrafficUpdate YES
 
 typedef enum
 {
@@ -26,6 +27,8 @@ typedef enum
 
 @property (nonatomic) PreferredColourMode preferredColorMode;   // how should a host's preferred colour be set?
 @property (nonatomic) NSDictionary* protocolColourMap;          // when colouring based on protocol, use these colours
+
+@property (nonatomic) BOOL showOriginConnectorOnTrafficUpdate;  // should the origin connector be shown when a host receives/sends new traffic?
 
 @end
 
@@ -84,6 +87,8 @@ typedef enum
          * How will hosts be grouped?
          */
         _groupingStrategy = kHostStoreGroupBasedOnHopCount;
+        
+        _showOriginConnectorOnTrafficUpdate = kShowOriginConnectorOnTrafficUpdate;
     }
     
     return self;
@@ -123,6 +128,10 @@ typedef enum
 
         [self addNode:host];
         hostCreated = YES;
+    }
+    else if (self.showOriginConnectorOnTrafficUpdate)
+    {
+        host.originConnector = 1.0;
     }
     
     /**
