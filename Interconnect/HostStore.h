@@ -16,7 +16,8 @@ typedef enum
 {
     kHostStoreGroupBasedOnHopCount = 0,
     kHostStoreGroupBasedOnRTT,
-    kHostStoreGroupBasedOnAS
+    kHostStoreGroupBasedOnAS,
+    kHostStoreGroupBasedOnNetworkClass
 } HostStoreGroupingStrategy;
 
 @interface HostStore : NodeStore

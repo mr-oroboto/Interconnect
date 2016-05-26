@@ -250,6 +250,9 @@ typedef enum
                 self.groupingStrategy = kHostStoreGroupBasedOnAS;
                 break;
             case kHostStoreGroupBasedOnAS:
+                self.groupingStrategy = kHostStoreGroupBasedOnNetworkClass;
+                break;
+            case kHostStoreGroupBasedOnNetworkClass:
                 self.groupingStrategy = kHostStoreGroupBasedOnHopCount;
                 break;
         }
@@ -743,6 +746,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             break;
         case kHostStoreGroupBasedOnAS:
             groupingStrategy = @"AS";
+            break;
+        case kHostStoreGroupBasedOnNetworkClass:
+            groupingStrategy = @"net";
             break;
     }
     

@@ -86,7 +86,7 @@ typedef enum
         /**
          * How will hosts be grouped?
          */
-        _groupingStrategy = kHostStoreGroupBasedOnHopCount;
+        _groupingStrategy = kHostStoreGroupBasedOnNetworkClass;
         
         _showOriginConnectorOnTrafficUpdate = kShowOriginConnectorOnTrafficUpdate;
     }
@@ -106,8 +106,15 @@ typedef enum
     
     if ( ! host)
     {
-        // All nodes will grow from 0.01 to their initial volume size and start off in the first orbital (grouping occurs when more details are known)
-        host = [Host createInGroup:1 withIdentifier:identifier andVolume:0.01];
+        // All nodes start off in the first orbital (grouping occurs when more details are known) unless grouping by net class
+        NSUInteger hostGroup = 1;
+        if (self.groupingStrategy == kHostStoreGroupBasedOnNetworkClass)
+        {
+            hostGroup = [self hostGroupBasedOnNetworkClass:identifier];     // @dragon: assumes identifiers are always IPv4 addresses
+        }
+
+        // All nodes will grow from 0.01 to their initial volume size
+        host = [Host createInGroup:hostGroup withIdentifier:identifier andVolume:0.01];
         host.ipAddress = identifier;
         host.originConnector = 2.0;
         host.firstPortSeen = port;
@@ -305,6 +312,20 @@ typedef enum
     return hostGroup;
 }
 
+- (NSUInteger)hostGroupBasedOnNetworkClass:(NSString*)ipAddress
+{
+    // At present this just groups hosts based on the first 8 bits of their network address (modulo max groups)
+    NSArray* dottedQuads = [ipAddress componentsSeparatedByString:@"."];
+    
+    if (dottedQuads.count != 4)
+    {
+        NSLog(@"Cannot determine host group for IP address %@", ipAddress);
+        return 1;
+    }
+    
+    return ([dottedQuads[0] integerValue] % kMaxHostGroups + 1);
+}
+
 /**
  * Hosts can be grouped based on common attributes (ie. their hop count from us, the average RTT to them, their AS etc).
  *
@@ -346,6 +367,10 @@ typedef enum
                 
             case kHostStoreGroupBasedOnAS:
                 hostGroup = [self hostGroupBasedOnAS:host.autonomousSystem];
+                break;
+                
+            case kHostStoreGroupBasedOnNetworkClass:
+                hostGroup = [self hostGroupBasedOnNetworkClass:host.ipAddress];
                 break;
                 
             default:
