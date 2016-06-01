@@ -385,4 +385,14 @@ typedef enum
     [self unlockStore];
 }
 
+- (void)resetStore
+{
+    [self lockStore];
+
+    [self clearNodes];
+    self.largestBytesSeen = 0;
+
+    [self unlockStore];
+}
+
 @end

@@ -34,4 +34,6 @@ typedef enum
 - (void)recalculateHostSizesBasedOnBytesTransferred;
 - (void)regroupHostsBasedOnStrategy:(HostStoreGroupingStrategy)strategy;
 
+- (void)resetStore;
+
 @end

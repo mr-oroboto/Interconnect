@@ -271,6 +271,10 @@ typedef enum
             self.colourationMode = kColourationByPreferredColour;
         }
     }
+    else if ([[theEvent characters] isEqualToString:@"r"])
+    {
+        [[HostStore sharedStore] resetStore];
+    }
     else if ([theEvent modifierFlags] & NSNumericPadKeyMask)
     {
         [self interpretKeyEvents:[NSArray arrayWithObject:theEvent]];

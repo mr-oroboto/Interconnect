@@ -47,6 +47,10 @@
 
 #pragma mark - Node Management
 
+/**
+ * NOTE: NodeStore expects to be synchronised by a child class.
+ */
+
 - (void)addNode:(Node*)node
 {
     // Do we already have this node? If so, this is a no-op (even if the orbital is different).
@@ -98,6 +102,12 @@
     }
     
     node.orbital = orbital;
+}
+
+- (void)clearNodes
+{
+    [self.nodesByIdentifier removeAllObjects];
+    [self.orbitals removeAllObjects];
 }
 
 - (Node*)node:(NSString*)identifier

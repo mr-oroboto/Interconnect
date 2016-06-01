@@ -18,6 +18,8 @@
 
 - (void)addNode:(Node*)node;
 - (void)updateNode:(Node*)node withOrbital:(NSUInteger)orbital;
+- (void)clearNodes;
+
 - (Node*)node:(NSString*)identifier;
 - (NSDictionary*)inhabitedOrbitals;
 - (NSDictionary*)nodes;
