@@ -27,18 +27,18 @@
 
 @interface CaptureWorker ()
 
-@property (nonatomic) BOOL stopWorker;                      // set from main, read from worker
 @property (nonatomic) BOOL workerRunning;                   // set from worker, read from main
+@property (nonatomic, copy) void (^stopBlock)(void);        // used to signal capture thread exit
+@property (nonatomic, strong) NSLock* startStopLock;
 
 @property (nonatomic) dispatch_queue_t captureQueue;        // libpcap runs here
-@property (nonatomic) dispatch_queue_t probeQueue;          // serialise probes that require it (legacy ICMP echo & traceroute)
+@property (nonatomic) NSOperationQueue* probeQueue;         // serialise probes that require it (legacy ICMP echo & traceroute)
 @property (nonatomic) NSOperationQueue* resolverQueue;      // allows multiple concurrent resolutions
 
 @property (nonatomic) bpf_u_int32 interfaceAddress;         // IPv4 address of capture interface
 @property (nonatomic) bpf_u_int32 interfaceMask;            // IPv4 netmask of capture interface
 
-@property (nonatomic) ProbeType probeType;                  // how should newly discovered hosts be probed?
-@property (nonatomic) ProbeThread* probeThread;             // for threaded probes
+@property (nonatomic, strong) ProbeThread* probeThread;             // for threaded probes
 
 @property (nonatomic) float msSinceLastHostResize;
 
@@ -46,12 +46,15 @@
 
 @implementation CaptureWorker
 
+#pragma mark - Initialisation
+
 - (instancetype)init
 {
     if (self = [super init])
     {
+        _startStopLock = [[NSLock alloc] init];
         _workerRunning = NO;
-        _stopWorker = NO;
+        _stopBlock = nil;
 
         // Ensure our header definitions will work
         if (sizeof(unsigned short) != 2)
@@ -65,31 +68,10 @@
         }
 
         _msSinceLastHostResize = 0;
-        
-        _probeType = kProbeTypeThreadTraceroute;
         _probeQueue = nil;
         _probeThread = nil;
-        
-        switch (_probeType)
-        {
-            case kProbeTypeICMPEcho:
-            case kProbeTypeTraceroute:
-                _probeQueue = dispatch_queue_create("net.oroboto.Interconnect.Probes", NULL);
-                break;
-                
-            case kProbeTypeThreadICMPEcho:
-                _probeThread = [[ICMPEchoProbeThread alloc] init];
-                [_probeThread start];
-                break;
-                
-            case kProbeTypeThreadTraceroute:
-                _probeThread = [[ICMPTimeExceededProbeThread alloc] init];
-                [_probeThread start];
-                break;
-                
-            default:
-                [NSException raise:@"CaptureWorker" format:@"Unknown probe type"];
-        }
+
+        [self setProbeMethod:kProbeTypeThreadTraceroute completeTimedOutProbes:YES];
         
         // Create a serial dispatch queue, we'll only ever queue up one task on it.
         _captureQueue = dispatch_queue_create("net.oroboto.Interconnect.CaptureWorker", NULL);
@@ -106,22 +88,102 @@
 {
 }
 
-- (void)stopCapture
+- (BOOL)setProbeMethod:(ProbeType)probeType completeTimedOutProbes:(BOOL)completeTimedOutProbes
 {
-    self.stopWorker = YES;
+    if (self.workerRunning)
+    {
+        NSLog(@"Probe type cannot be changed while worker is running");
+        return NO;
+    }
+
+    _probeType = probeType;
+    _completeTimedOutProbes = completeTimedOutProbes;
+
+    return YES;
+}
+
+- (void)initialiseProbeMethod
+{
+    if (self.probeQueue)
+    {
+        self.probeQueue = nil;
+    }
+    
+    if (self.probeThread)
+    {
+        // If previously started it should have been stopped and we get to recreate it
+        assert( ! self.probeThread.threadRunning);
+        self.probeThread = nil;
+    }
+    
+    switch (self.probeType)
+    {
+        case kProbeTypeICMPEcho:
+        case kProbeTypeTraceroute:
+            self.probeQueue = [[NSOperationQueue alloc] init];
+            [self.probeQueue setMaxConcurrentOperationCount:1]; // ICMP DGRAM socket requires serialised access or per probe identification
+            break;
+            
+        case kProbeTypeThreadICMPEcho:
+            self.probeThread = [[ICMPEchoProbeThread alloc] init];
+            [self.probeThread start];
+            break;
+            
+        case kProbeTypeThreadTraceroute:
+            self.probeThread = [[ICMPTimeExceededProbeThread alloc] init];
+            self.probeThread.completeTimedOutProbes = self.completeTimedOutProbes;
+            [self.probeThread start];
+            break;
+            
+        default:
+            [NSException raise:@"CaptureWorker" format:@"Unknown probe type"];
+    }
+}
+
+#pragma mark - Worker Control
+
+- (BOOL)stopCapture:(void (^)(void))threadStoppedBlock
+{
+    BOOL stopRequested = YES;
+    
+    [self.startStopLock lock];
+    
+    if ( ! self.workerRunning)
+    {
+        NSLog(@"Could not stop capture thread, it's not running");
+        stopRequested = NO;
+    }
+    
+    /**
+     * If we didn't test for this there is a race condition when stopCapture is called when the worker thread is stopping
+     * but hasn't yet exited. We'd be allowed to request a stop but our block would never be called.
+     */
+    if (self.stopBlock)
+    {
+        NSLog(@"Could not stop capture thread, a stop is already requested");
+        stopRequested = NO;
+    }
+
+    if (stopRequested)
+    {
+        // Signal the stop
+        self.stopBlock = threadStoppedBlock;
+    }
+    
+    [self.startStopLock unlock];
+    
+    return stopRequested;
 }
 
 - (void)startCapture
 {
-    self.stopWorker = NO;
-    
-    void (^completionBlock)() = ^() {
-        NSLog(@"captureBlock finished on thread %@", [NSThread currentThread]);
-    };
-    
     void (^captureBlock)() = ^() {
-        self.workerRunning = YES;
-        
+        [self.startStopLock lock];
+        self.workerRunning = YES;           // self.stopBlock could already have been set by now (race condition, if so we'll exit immediately below)
+        [self.startStopLock unlock];
+
+        void (^stopBlock)(void) = nil;
+
         NSLog(@"captureBlock started on thread %@", [NSThread currentThread]);
         
         char errbuf[PCAP_ERRBUF_SIZE];
@@ -151,12 +213,14 @@
         self.interfaceAddress = ((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr.s_addr;
         NSLog(@"Opened [%s (%s)] for live capture", device, inet_ntoa(((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr));
         
-        if ( ! (capture_handle = pcap_open_live("en0", 4096 /* snaplen: max bytes to capture */, 1 /* promisc */, 0 /* to_ms: infinite */, errbuf)))
+        if ( ! (capture_handle = pcap_open_live("en0", 4096 /* snaplen: max bytes to capture */, 1 /* promisc */, 1000 /* to_ms: 1 second */, errbuf)))
         {
             NSLog(@"pcap_open_live failed");
         }
         else
         {
+            [self initialiseProbeMethod];
+            
             struct pcap_pkthdr header;
             const unsigned char* packet;
             int linklayer_hdr_type = pcap_datalink(capture_handle);
@@ -170,12 +234,14 @@
                 
                 struct timeval timeStart, timeEnd;
                 
-                while ( ! self.stopWorker)
+                while ( ! stopBlock)
                 {
                     gettimeofday(&timeStart, NULL);
 
-                    packet = pcap_next(capture_handle, &header);
-                    [self processEthernetFrame:packet header:&header];
+                    if ((packet = pcap_next(capture_handle, &header)) != NULL)
+                    {
+                        [self processEthernetFrame:packet header:&header];
+                    }
 
                     gettimeofday(&timeEnd, NULL);
 
@@ -184,6 +250,13 @@
                     {
                         [self recalculateHostSizes];
                     }
+                    
+                    [self.startStopLock lock];
+                    if (self.stopBlock)
+                    {
+                        stopBlock = self.stopBlock;     // remember we were signaled to stop
+                    }
+                    [self.startStopLock unlock];
                 }
             }
             else
@@ -194,15 +267,75 @@
             pcap_close(capture_handle);
         }
         
-        NSLog(@"captureBlock exiting");
+        NSLog(@"captureBlock exiting, waiting for probe and resolve threads to clear");
         
-        self.workerRunning = NO;
+        /**
+         * Wait for all existing probes and host resolutions to finish so that when the capture thread stops all 
+         * related concurrent operations are also finished.
+         *
+         * The NSOperationQueues will simply not run any queued NSInvocationOperations that have not yet started and
+         * those that have started should return quite quickly anyway.
+         *
+         * For our probes, we ask them to drain their probe queues before we allow ourselves to finish. That way any
+         * in flight probe that is received after clearing will be ignored (the threads themselves are not stopped).
+         */
+        [self.resolverQueue cancelAllOperations];
+        while (self.resolverQueue.operationCount)
+        {
+            NSLog(@"Waiting for %lu outstanding host resolutions", (unsigned long)self.resolverQueue.operationCount);
+            usleep(100000);
+        }
+
+        NSLog(@"All outstanding resolution operations have been cancelled");
         
-        dispatch_async(dispatch_get_main_queue(), completionBlock);
+        if (self.probeQueue)
+        {
+            [self.probeQueue cancelAllOperations];
+            while (self.probeQueue.operationCount)
+            {
+                NSLog(@"Waiting for %lu outstanding probe operations to be cancelled", self.probeQueue.operationCount);
+                usleep(100000);
+            }
+            
+            NSLog(@"All outstanding probe operations have been cancelled");
+        }
+        
+        if (self.probeThread)
+        {
+            NSLog(@"Signalling probe thread to exit");
+            
+            void (^probeThreadStopBlock)() = ^() {
+                NSLog(@"Probe thread was stopped");
+                self.probeThread = nil;
+                [self signalCaptureThreadIsStopped:stopBlock];
+            };
+
+            [self.probeThread stop:probeThreadStopBlock];
+        }
+        else
+        {
+            [self signalCaptureThreadIsStopped:stopBlock];
+        }
     };
     
     dispatch_async(_captureQueue, captureBlock);
 }
+
+- (void)signalCaptureThreadIsStopped:(void (^)(void))stopBlock
+{
+    [self.startStopLock lock];
+    self.workerRunning = NO;
+    self.stopBlock = nil;               // subsequent starts should not immediately stop unless stopCapture was called
+    [self.startStopLock unlock];
+    
+    if (stopBlock)
+    {
+        // This is not called with the lock held or it could never be used to restart the thread
+        dispatch_async(dispatch_get_main_queue(), stopBlock);
+    }
+}
+
+#pragma mark - Packet Processing
 
 - (void)processEthernetFrame:(const unsigned char*)packet header:(struct pcap_pkthdr*)header
 {
@@ -321,10 +454,12 @@
 
     if (self.probeType == kProbeTypeICMPEcho)
     {
-        // Using a "connected" SOCK_DGRAM for ICMP echos does not demultiplex ICMP echo responses from different
-        // hosts to the "right" socket. Until the ICMP echo probe is implemented as a single thread that consumes
-        // multiple probe requests at once (and resolves them out of order) the ICMP echo task must be serialised.
-        dispatch_async(_probeQueue, ^{
+        /**
+         * Using a "connected" SOCK_DGRAM for ICMP echos does not demultiplex ICMP echo responses from different
+         * hosts to the "right" socket. Until the ICMP echo probe is implemented as a single thread that consumes
+         * multiple probe requests at once (and resolves them out of order) the ICMP echo task must be serialised.
+         */
+        NSBlockOperation* probeOperation = [NSBlockOperation blockOperationWithBlock: ^{
             ICMPEchoProbe* probe = [ICMPEchoProbe probeWithIPAddress:ipAddress];
             float rttToHost = [probe measureAverageRTT];
             
@@ -336,11 +471,13 @@
             {
                 NSLog(@"Failed to get average RTT to %@", ipAddress);
             }
-        });
+        }];
+        
+        [self.probeQueue addOperation:probeOperation];
     }
     else if (self.probeType == kProbeTypeTraceroute)
     {
-        dispatch_async(_probeQueue, ^{
+        NSBlockOperation* probeOperation = [NSBlockOperation blockOperationWithBlock: ^{
             ICMPTimeExceededProbe* probe = [ICMPTimeExceededProbe probeWithIPAddress:ipAddress];
             NSInteger hopCount = [probe measureHopCount];
             
@@ -352,7 +489,9 @@
             {
                 NSLog(@"Failed to get hop count to %@", ipAddress);
             }
-        });
+        }];
+        
+        [self.probeQueue addOperation:probeOperation];
     }
     else if (self.probeType == kProbeTypeThreadICMPEcho || self.probeType == kProbeTypeThreadTraceroute)
     {

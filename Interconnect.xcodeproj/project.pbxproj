@@ -17,6 +17,8 @@
 		602A9FCD1CC1AC1A0051CFEF /* NodeStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCC1CC1AC1A0051CFEF /* NodeStore.m */; };
 		602A9FD01CC1AC250051CFEF /* Node.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCF1CC1AC250051CFEF /* Node.m */; };
 		602A9FD31CC1AC360051CFEF /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FD21CC1AC360051CFEF /* Host.m */; };
+		6039D12D1D0164AF00EB55A3 /* PreferencesSheet.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6039D12C1D0164AF00EB55A3 /* PreferencesSheet.xib */; };
+		603EE8191D0260A8009B416B /* PreferencesSheetController.m in Sources */ = {isa = PBXBuildFile; fileRef = 603EE8181D0260A8009B416B /* PreferencesSheetController.m */; };
 		6040C9721CD2C22400484468 /* ICMPEchoProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = 6040C9711CD2C22400484468 /* ICMPEchoProbe.m */; };
 		606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 606FFB171CC6DE1800A1CF70 /* HostStore.m */; };
 		607578591CEA964900C33885 /* ICMPTimeExceededProbeThread.m in Sources */ = {isa = PBXBuildFile; fileRef = 607578581CEA964900C33885 /* ICMPTimeExceededProbeThread.m */; };
@@ -162,6 +164,9 @@
 		602A9FCF1CC1AC250051CFEF /* Node.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Node.m; sourceTree = "<group>"; };
 		602A9FD11CC1AC360051CFEF /* Host.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Host.h; sourceTree = "<group>"; };
 		602A9FD21CC1AC360051CFEF /* Host.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Host.m; sourceTree = "<group>"; };
+		6039D12C1D0164AF00EB55A3 /* PreferencesSheet.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PreferencesSheet.xib; sourceTree = "<group>"; };
+		603EE8171D0260A8009B416B /* PreferencesSheetController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreferencesSheetController.h; sourceTree = "<group>"; };
+		603EE8181D0260A8009B416B /* PreferencesSheetController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreferencesSheetController.m; sourceTree = "<group>"; };
 		6040C9701CD2C22400484468 /* ICMPEchoProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ICMPEchoProbe.h; sourceTree = "<group>"; };
 		6040C9711CD2C22400484468 /* ICMPEchoProbe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ICMPEchoProbe.m; sourceTree = "<group>"; };
 		606FFB161CC6DE1800A1CF70 /* HostStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HostStore.h; sourceTree = "<group>"; };
@@ -487,6 +492,7 @@
 				6003335A1CBA0673007BA868 /* Assets.xcassets */,
 				6003335C1CBA0673007BA868 /* MainMenu.xib */,
 				60DEC3871CF03C0100617C4F /* HelpSheet.xib */,
+				6039D12C1D0164AF00EB55A3 /* PreferencesSheet.xib */,
 				6003335F1CBA0673007BA868 /* Info.plist */,
 				600333571CBA0673007BA868 /* Supporting Files */,
 			);
@@ -510,6 +516,8 @@
 				600333681CBA06B8007BA868 /* OpenGLView.mm */,
 				60DEC3891CF03CE400617C4F /* HelpSheetController.h */,
 				60DEC38A1CF03CE400617C4F /* HelpSheetController.m */,
+				603EE8171D0260A8009B416B /* PreferencesSheetController.h */,
+				603EE8181D0260A8009B416B /* PreferencesSheetController.m */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -984,6 +992,7 @@
 				60ECFEB71CCD8471006420D4 /* matrix_interpolation.inl in Resources */,
 				60ECFE6F1CCD8471006420D4 /* func_trigonometric.inl in Resources */,
 				60ECFE9E1CCD8471006420D4 /* vec1.inl in Resources */,
+				6039D12D1D0164AF00EB55A3 /* PreferencesSheet.xib in Resources */,
 				60ECFE911CCD8471006420D4 /* integer.inl in Resources */,
 				6003335B1CBA0673007BA868 /* Assets.xcassets in Resources */,
 				60ECFED41CCD8471006420D4 /* vector_angle.inl in Resources */,
@@ -1035,6 +1044,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				603EE8191D0260A8009B416B /* PreferencesSheetController.m in Sources */,
 				60D3B6301CE7EB6000447CD6 /* ProbeThread.m in Sources */,
 				602A9FD01CC1AC250051CFEF /* Node.m in Sources */,
 				606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */,

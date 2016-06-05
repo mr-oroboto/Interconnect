@@ -28,8 +28,6 @@ typedef enum
 @property (nonatomic) PreferredColourMode preferredColorMode;   // how should a host's preferred colour be set?
 @property (nonatomic) NSDictionary* protocolColourMap;          // when colouring based on protocol, use these colours
 
-@property (nonatomic) BOOL showOriginConnectorOnTrafficUpdate;  // should the origin connector be shown when a host receives/sends new traffic?
-
 @end
 
 @implementation HostStore

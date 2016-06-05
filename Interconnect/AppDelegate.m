@@ -12,12 +12,15 @@
 #import "CaptureWorker.h"
 #import "ICMPTimeExceededProbeThread.h"
 #import "HelpSheetController.h"
+#import "PreferencesSheetController.h"
 
 @interface AppDelegate ()
 
 @property (weak) IBOutlet NSWindow *window;
 @property (nonatomic, strong) ProbeThread* thread;
 @property (nonatomic, strong) HelpSheetController* helpSheet;
+@property (nonatomic, strong) PreferencesSheetController* preferencesSheet;
+@property (nonatomic, strong) CaptureWorker* captureWorker;
 
 @end
 
@@ -25,9 +28,9 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    CaptureWorker* worker = [[CaptureWorker alloc] init];
+    self.captureWorker = [[CaptureWorker alloc] init];
 //  [self createSampleData];
-    [worker startCapture];
+    [self.captureWorker startCapture];
 
     return;
 }
@@ -45,6 +48,16 @@
     }
     
     [self.helpSheet displayModallyInWindow:self.window];
+}
+
+- (IBAction)displayPreferencesSheet:(id)sender
+{
+    if ( ! self.preferencesSheet)
+    {
+        self.preferencesSheet = [[PreferencesSheetController alloc] initWithCaptureWorker:self.captureWorker];
+    }
+    
+    [self.preferencesSheet displayModallyInWindow:self.window];
 }
 
 #pragma mark - Demo

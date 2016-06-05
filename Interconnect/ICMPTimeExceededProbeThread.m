@@ -23,7 +23,6 @@
 
 #define kMaxAttemptsToFindUnusedPort            10
 #define kBaseUDPPort                            30000
-#define kCompleteTimedOutProbes                 YES
 
 #define kMaxProbeTTL                            30
 #define kMaxProbeFlightTimeMs                   10000
@@ -94,7 +93,7 @@ struct payload
 {
     NSInteger sendStatus = [self sendPortUnreachableUDPPacketToIPAddress:toHostIdentifier onCompletion:completionBlock retrying:retrying];
     
-    if (sendStatus == kRetriesExceeded && kCompleteTimedOutProbes)
+    if (sendStatus == kRetriesExceeded && self.completeTimedOutProbes)
     {
         Probe* probe = self.probesByHostIdentifier[toHostIdentifier];
 
@@ -440,7 +439,7 @@ struct payload
         }
         else if ([self msElapsedBetween:probe.timeSent endTime:now] > kMaxProbeFlightTimeMs)
         {
-            // This will remove or complete (depending on kCompleteTimedOutProbes) the probe if the number of retries has been exceeded
+            // This will remove or complete (depending on completeTimedOutProbes) the probe if the number of retries has been exceeded
             NSLog(@"Retry (%d) for hop %u for timed out probe %@", probe.retries + 1, probe.currentTTL, probe.hostIdentifier);
             [self sendProbe:probe.hostIdentifier onCompletion:probe.completionBlock retrying:YES];
         }

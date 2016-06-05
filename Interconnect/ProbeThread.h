@@ -12,8 +12,12 @@
 
 @interface ProbeThread : NSObject
 
+@property (nonatomic, readonly) BOOL threadRunning;
+@property (nonatomic) BOOL completeTimedOutProbes;
+
 - (void)start;
-- (void)stop;
+- (BOOL)stop:(void (^)(void))threadStoppedBlock;
+
 - (void)queueProbeForHost:(NSString*)hostIdentifier withPriority:(BOOL)priority onCompletion:(void (^)(Probe*))completionBlock;
 - (void)processHostQueue;
 

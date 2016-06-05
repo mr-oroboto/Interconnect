@@ -18,7 +18,12 @@ typedef enum
 
 @interface CaptureWorker : NSObject
 
+@property (nonatomic, readonly) ProbeType probeType;                  // how should newly discovered hosts be probed?
+@property (nonatomic, readonly) BOOL completeTimedOutProbes;
+
+- (BOOL)setProbeMethod:(ProbeType)probeType completeTimedOutProbes:(BOOL)completeTimedOutProbes;
+
 - (void)startCapture;
-- (void)stopCapture;
+- (BOOL)stopCapture:(void (^)(void))threadStoppedBlock;
 
 @end

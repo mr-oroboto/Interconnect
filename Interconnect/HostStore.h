@@ -23,6 +23,7 @@ typedef enum
 @interface HostStore : NodeStore
 
 @property (nonatomic) HostStoreGroupingStrategy groupingStrategy;
+@property (nonatomic) BOOL showOriginConnectorOnTrafficUpdate;      // should the origin connector be shown when a host receives/sends new traffic?
 
 + (instancetype)sharedStore;
 

@@ -7,11 +7,12 @@
 //
 
 #import "ProbeThread.h"
+#import "ProbeThread+Private.h"
 
 @interface ProbeThread ()
 
 @property (nonatomic, strong) NSThread* probeThread;
-@property (nonatomic) BOOL stopThread;
+@property (nonatomic, copy) void (^stopBlock)(void);        // used to signal probe thread exit
 @property (nonatomic) CFRunLoopRef cfRunLoop;
 @property (nonatomic, strong) NSLock* probeQueueLock;
 @property (nonatomic, strong) NSMutableArray* probeQueue;
@@ -28,11 +29,14 @@
         NSLog(@"ProbeThread initialised");
 
         _probeThread = [[NSThread alloc] initWithTarget:self selector:@selector(threadMain:) object:nil];
+        _stopBlock = nil;
+        _threadRunning = NO;
+        _completeTimedOutProbes = YES;
+
         _cfRunLoop = NULL;
         _probeQueueLock = [[NSLock alloc] init];
         _probeQueueInputSource = NULL;
         _probeQueue = [NSMutableArray arrayWithCapacity:16];
-        _stopThread = NO;
     }
     
     return self;
@@ -43,9 +47,18 @@
     [self.probeThread start];
 }
 
-- (void)stop
+- (BOOL)stop:(void (^)(void))threadStoppedBlock
 {
-    self.stopThread = YES;
+    if (self.stopBlock)
+    {
+        NSLog(@"Could not stop probe thread, a stop is already requested");
+        return NO;
+    }
+    
+    // Signal the stop. It is expected only one thread is ever our client.
+    self.stopBlock = threadStoppedBlock;
+    
+    return YES;
 }
 
 #pragma mark - ProbeInterface
@@ -191,6 +204,8 @@ void SocketCallback(CFSocketRef s, CFSocketCallBackType callbackType, CFDataRef 
 
 - (void)threadMain:(id)context
 {
+    _threadRunning = YES;
+    
     NSRunLoop* runLoop = [NSRunLoop currentRunLoop];
 
     CFSocketRef cfSocketRef = NULL;
@@ -246,10 +261,9 @@ void SocketCallback(CFSocketRef s, CFSocketCallBackType callbackType, CFDataRef 
         {
             // Run the run loop but time out after 1 second if no input sources or timers have caused it to exit sooner
             [runLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1]];
-            
             [self cleanupProbes];
         }
-        while ( ! self.stopThread);
+        while ( ! self.stopBlock);
     }
     @catch (NSException *e)
     {
@@ -259,14 +273,24 @@ void SocketCallback(CFSocketRef s, CFSocketCallBackType callbackType, CFDataRef 
     {
         NSLog(@"ProbeThread::threadMain exiting");
         
+        CFRunLoopRemoveSource(self.cfRunLoop, self.probeQueueInputSource, kCFRunLoopDefaultMode);
+        
+        if (cfSocketSource)
+        {
+            CFRunLoopRemoveSource(self.cfRunLoop, cfSocketSource, kCFRunLoopDefaultMode);
+            CFRelease(cfSocketSource);
+        }
+        
         if (cfSocketRef)
         {
             CFRelease(cfSocketRef);
         }
         
-        if (cfSocketSource)
+        _threadRunning = NO;
+        
+        if (self.stopBlock)
         {
-            CFRelease(cfSocketSource);
+            self.stopBlock();
         }
     }
 }

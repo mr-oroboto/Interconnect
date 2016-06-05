@@ -13,5 +13,4 @@
 - (void)displayModallyInWindow:(NSWindow*)window;
 - (IBAction)closeSheet:(id)sender;
 
-
 @end
