@@ -8,16 +8,17 @@
     <objects>
         <customObject id="-2" userLabel="File's Owner" customClass="PreferencesSheetController">
             <connections>
-                <outlet property="btnCompleteTimedOutProbes" destination="imB-38-gIf" id="0NS-hk-Veh"/>
-                <outlet property="btnDisplayIntermediateRouters" destination="Mky-d2-Y4E" id="gmC-fd-wQ3"/>
-                <outlet property="btnDisplayOriginConnector" destination="ZHW-da-VSb" id="bZC-rU-AqU"/>
-                <outlet property="btnUnusualPortsOnly" destination="gUI-oQ-cf8" id="WU9-uD-ohE"/>
-                <outlet property="progressMessage" destination="BC8-oh-8Wc" id="c6y-7K-oJU"/>
-                <outlet property="progressPanel" destination="CLq-vm-CnV" id="Jvy-Z4-ZFZ"/>
-                <outlet property="selectInterface" destination="zQn-Oz-omE" id="gB1-CA-hQV"/>
-                <outlet property="selectProbe" destination="FXy-5b-AO9" id="3vg-f6-e2Y"/>
-                <outlet property="textFilter" destination="lpI-sR-Jl6" id="YfR-rf-Sgu"/>
-                <outlet property="window" destination="RrF-EY-TKb" id="UCB-fu-Ukd"/>
+                <outlet property="btnCompleteTimedOutProbes" destination="imB-38-gIf" id="iwF-c9-Rh7"/>
+                <outlet property="btnDisplayIntermediateRouters" destination="Mky-d2-Y4E" id="rQl-O9-i96"/>
+                <outlet property="btnDisplayOriginConnector" destination="ZHW-da-VSb" id="NQh-sD-HGR"/>
+                <outlet property="btnUnusualPortsOnly" destination="gUI-oQ-cf8" id="g1g-Ty-581"/>
+                <outlet property="progressIndicator" destination="Bas-3e-q41" id="kBW-kV-yyD"/>
+                <outlet property="progressMessage" destination="BC8-oh-8Wc" id="tFB-c1-XNY"/>
+                <outlet property="progressPanel" destination="CLq-vm-CnV" id="1ym-yd-qHC"/>
+                <outlet property="selectInterface" destination="zQn-Oz-omE" id="4F8-AF-91a"/>
+                <outlet property="selectProbe" destination="FXy-5b-AO9" id="cTR-Wi-spr"/>
+                <outlet property="textFilter" destination="lpI-sR-Jl6" id="tdh-db-4F9"/>
+                <outlet property="window" destination="RrF-EY-TKb" id="I9W-Sd-YpT"/>
             </connections>
         </customObject>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
@@ -26,7 +27,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES" utility="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="-1724" y="67" width="691" height="427"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1177"/>
+            <rect key="screenRect" x="-1920" y="-65" width="1920" height="1177"/>
             <view key="contentView" id="g9u-Lb-2L1">
                 <rect key="frame" x="0.0" y="0.0" width="691" height="427"/>
                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -77,10 +78,14 @@
                                 </button>
                                 <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="zQn-Oz-omE">
                                     <rect key="frame" x="455" y="99" width="183" height="26"/>
-                                    <popUpButtonCell key="cell" type="push" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" id="hsF-6E-5Vj">
+                                    <popUpButtonCell key="cell" type="push" title="Traceroute (Optimised)" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" tag="3" imageScaling="proportionallyDown" inset="2" selectedItem="Ig4-UL-zVX" id="hsF-6E-5Vj">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="menu"/>
-                                        <menu key="menu" id="47G-b2-3D0"/>
+                                        <menu key="menu" id="47G-b2-3D0">
+                                            <items>
+                                                <menuItem title="Traceroute (Optimised)" tag="3" id="Ig4-UL-zVX"/>
+                                            </items>
+                                        </menu>
                                     </popUpButtonCell>
                                 </popUpButton>
                             </subviews>
@@ -104,12 +109,12 @@
                                 </textField>
                                 <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="FXy-5b-AO9">
                                     <rect key="frame" x="455" y="49" width="183" height="26"/>
-                                    <popUpButtonCell key="cell" type="push" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" id="No2-AR-6uA">
+                                    <popUpButtonCell key="cell" type="push" title="Traceroute (Optimised)" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" tag="3" imageScaling="proportionallyDown" inset="2" selectedItem="UNl-ii-F5j" id="No2-AR-6uA">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="menu"/>
                                         <menu key="menu" id="QqP-KH-JYp">
                                             <items>
-                                                <menuItem title="Traceroute (Optimised)" tag="3" id="UNl-ii-F5j"/>
+                                                <menuItem title="Traceroute (Optimised)" state="on" tag="3" id="UNl-ii-F5j"/>
                                                 <menuItem title="Ping (Optimised)" tag="2" id="lJO-s3-opC"/>
                                                 <menuItem title="Traceroute (Legacy)" tag="1" id="ePJ-ck-fFO"/>
                                                 <menuItem title="Ping (Legacy)" id="eaT-t6-o67"/>

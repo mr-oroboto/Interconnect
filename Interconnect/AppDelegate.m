@@ -30,7 +30,7 @@
 {
     self.captureWorker = [[CaptureWorker alloc] init];
 //  [self createSampleData];
-    [self.captureWorker startCapture];
+    [self.captureWorker startCapture:@""];
 
     return;
 }

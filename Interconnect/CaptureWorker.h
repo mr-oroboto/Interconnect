@@ -20,10 +20,13 @@ typedef enum
 
 @property (nonatomic, readonly) ProbeType probeType;                  // how should newly discovered hosts be probed?
 @property (nonatomic, readonly) BOOL completeTimedOutProbes;
+@property (nonatomic, readonly) NSString* captureInterface;
+
+- (NSArray*)captureDevices;
 
 - (BOOL)setProbeMethod:(ProbeType)probeType completeTimedOutProbes:(BOOL)completeTimedOutProbes;
 
-- (void)startCapture;
+- (void)startCapture:(NSString*)interfaceName;
 - (BOOL)stopCapture:(void (^)(void))threadStoppedBlock;
 
 @end

@@ -175,7 +175,7 @@
     return stopRequested;
 }
 
-- (void)startCapture
+- (void)startCapture:(NSString*)captureInterface
 {
     void (^captureBlock)() = ^() {
         [self.startStopLock lock];
@@ -184,90 +184,104 @@
 
         void (^stopBlock)(void) = nil;
 
-        NSLog(@"captureBlock started on thread %@", [NSThread currentThread]);
+        NSLog(@"CaptureWorker started on thread %@", [NSThread currentThread]);
         
-        char errbuf[PCAP_ERRBUF_SIZE];
-        char *device;
-        pcap_t *capture_handle;
-        
-        if ( ! (device = pcap_lookupdev(errbuf)))
+        @try
         {
-            NSLog(@"pcap_lookupdev failed: %s", errbuf);
-            return;
-        }
+            char errbuf[PCAP_ERRBUF_SIZE];
+            const char *device;
+            pcap_t *capture_handle;
 
-        // Get network *number* (currently unused) and mask
-        if (pcap_lookupnet(device, &_interfaceAddress, &_interfaceMask, errbuf) < 0)
-        {
-            NSLog(@"pcap_lookupnet failed: %s", errbuf);
-            return;
-        }
-        
-        // Get interface address
-        int fd = socket(AF_INET, SOCK_DGRAM, 0);
-        struct ifreq ifr;
-        strncpy(ifr.ifr_name, device, IFNAMSIZ-1);
-        ioctl(fd, SIOCGIFADDR, &ifr);
-        close(fd);
-
-        self.interfaceAddress = ((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr.s_addr;
-        NSLog(@"Opened [%s (%s)] for live capture", device, inet_ntoa(((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr));
-        
-        if ( ! (capture_handle = pcap_open_live("en0", 4096 /* snaplen: max bytes to capture */, 1 /* promisc */, 1000 /* to_ms: 1 second */, errbuf)))
-        {
-            NSLog(@"pcap_open_live failed");
-        }
-        else
-        {
-            [self initialiseProbeMethod];
-            
-            struct pcap_pkthdr header;
-            const unsigned char* packet;
-            int linklayer_hdr_type = pcap_datalink(capture_handle);
-            
-            if ([self logDataLinkHeaderType:linklayer_hdr_type])
+            if (captureInterface.length == 0)
             {
-                /*
-                 pcap_compile()
-                 pcap_setfilter()
-                 */
-                
-                struct timeval timeStart, timeEnd;
-                
-                while ( ! stopBlock)
+                if ( ! (device = pcap_lookupdev(errbuf)))
                 {
-                    gettimeofday(&timeStart, NULL);
-
-                    if ((packet = pcap_next(capture_handle, &header)) != NULL)
-                    {
-                        [self processEthernetFrame:packet header:&header];
-                    }
-
-                    gettimeofday(&timeEnd, NULL);
-
-                    self.msSinceLastHostResize += [self msElapsedBetween:&timeStart endTime:&timeEnd];
-                    if (self.msSinceLastHostResize >= kRecalculateHostSizePeriodMs)
-                    {
-                        [self recalculateHostSizes];
-                    }
-                    
-                    [self.startStopLock lock];
-                    if (self.stopBlock)
-                    {
-                        stopBlock = self.stopBlock;     // remember we were signaled to stop
-                    }
-                    [self.startStopLock unlock];
+                    [NSException raise:@"pcap_lookupdev" format:@"pcap_lookupdev failed: %s", errbuf];
                 }
             }
             else
             {
-                NSLog(@"Unsupported data-link layer");
+                device = [captureInterface cStringUsingEncoding:NSASCIIStringEncoding];
             }
             
-            pcap_close(capture_handle);
+            _captureInterface = [NSString stringWithFormat:@"%s", device];
+
+            // Get network *number* (currently unused) and mask
+            if (pcap_lookupnet(device, &_interfaceAddress, &_interfaceMask, errbuf) < 0)
+            {
+                [NSException raise:@"pcap_lookupnet" format:@"pcap_lookupnet failed: %s", errbuf];
+            }
+            
+            // Get interface address (if defined)
+            int fd = socket(AF_INET, SOCK_DGRAM, 0);
+            struct ifreq ifr;
+            strncpy(ifr.ifr_name, device, IFNAMSIZ-1);
+            ioctl(fd, SIOCGIFADDR, &ifr);
+            close(fd);
+
+            self.interfaceAddress = ((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr.s_addr;
+            NSLog(@"Opened [%s (%s)] for live capture", device, inet_ntoa(((struct sockaddr_in*)&ifr.ifr_ifru.ifru_addr)->sin_addr));
+            
+            if ( ! (capture_handle = pcap_open_live(device, 4096 /* snaplen: max bytes to capture */, 1 /* promisc */, 1000 /* to_ms: 1 second */, errbuf)))
+            {
+                [NSException raise:@"pcap_open_live" format:@"pcap_open_live failed"];
+            }
+            else
+            {
+                [self initialiseProbeMethod];
+                
+                struct pcap_pkthdr header;
+                const unsigned char* packet;
+                int linklayer_hdr_type = pcap_datalink(capture_handle);
+                
+                if ([self logDataLinkHeaderType:linklayer_hdr_type])
+                {
+                    /*
+                     pcap_compile()
+                     pcap_setfilter()
+                     */
+                    
+                    struct timeval timeStart, timeEnd;
+                    
+                    while ( ! stopBlock)
+                    {
+                        gettimeofday(&timeStart, NULL);
+
+                        if ((packet = pcap_next(capture_handle, &header)) != NULL)
+                        {
+                            [self processEthernetFrame:packet header:&header];
+                        }
+
+                        gettimeofday(&timeEnd, NULL);
+
+                        self.msSinceLastHostResize += [self msElapsedBetween:&timeStart endTime:&timeEnd];
+                        if (self.msSinceLastHostResize >= kRecalculateHostSizePeriodMs)
+                        {
+                            [self recalculateHostSizes];
+                        }
+                        
+                        [self.startStopLock lock];
+                        if (self.stopBlock)
+                        {
+                            stopBlock = self.stopBlock;     // remember we were signaled to stop
+                        }
+                        [self.startStopLock unlock];
+                    }
+                }
+                else
+                {
+                    NSLog(@"Unsupported data-link layer");
+                }
+                
+                pcap_close(capture_handle);
+            }
         }
-        
-        NSLog(@"captureBlock exiting, waiting for probe and resolve threads to clear");
+        @catch (NSException* e)
+        {
+            NSLog(@"CaptureWorker caught exception %@", e);
+        }
+
+        NSLog(@"CaptureWorker exiting, waiting for probe and resolve threads to clear");
         
         /**
          * Wait for all existing probes and host resolutions to finish so that when the capture thread stops all 
@@ -333,6 +347,38 @@
         // This is not called with the lock held or it could never be used to restart the thread
         dispatch_async(dispatch_get_main_queue(), stopBlock);
     }
+    
+    NSLog(@"CaptureWorker exited");
+}
+
+- (NSArray*)captureDevices
+{
+    NSMutableArray* captureDevices = [[NSMutableArray alloc] init];
+    
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t* deviceList;
+    
+    if (pcap_findalldevs(&deviceList, errbuf) == 0)
+    {
+        pcap_if_t *device = deviceList;
+        
+        do
+        {
+            NSMutableDictionary* deviceEntry = [NSMutableDictionary dictionaryWithCapacity:2];
+            
+            deviceEntry[@"name"] = [NSString stringWithFormat:@"%s", device->name];
+            if (device->description)
+            {
+                deviceEntry[@"description"] = [NSString stringWithFormat:@"%s", device->description];
+            }
+            
+            [captureDevices addObject:deviceEntry];
+        } while((device = device->next));
+        
+        pcap_freealldevs(deviceList);
+    }
+
+    return captureDevices;
 }
 
 #pragma mark - Packet Processing

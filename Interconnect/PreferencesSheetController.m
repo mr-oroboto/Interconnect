@@ -13,6 +13,7 @@
 @interface PreferencesSheetController ()
 
 @property (nonatomic, strong) CaptureWorker* captureWorker;
+@property (nonatomic, strong) NSArray* captureDevices;
 
 @property (nonatomic, strong) IBOutlet NSPanel* progressPanel;
 @property (nonatomic, strong) IBOutlet NSTextField* progressMessage;
@@ -41,8 +42,11 @@
 
 - (void)windowDidLoad
 {
-    [super windowDidLoad];
     // Implement this method to handle any initialization after your window controller's window has been loaded from its nib file.
+    [super windowDidLoad];
+
+    // Need to wait until the NIB file has loaded before our outlets are connected
+    [self setupControls];
 }
 
 - (void)probeTypeChanged:(id)sender
@@ -59,12 +63,50 @@
     }
 }
 
+- (void)setupControls
+{
+    if (self.window)
+    {
+        [self.selectInterface removeAllItems];
+        self.captureDevices = [self.captureWorker captureDevices];
+        
+        NSString *currentCaptureInterface = self.captureWorker.captureInterface;
+        NSUInteger interfaceIndex = 0;
+        
+        for (NSDictionary* interfaceDetails in self.captureDevices)
+        {
+            if (interfaceDetails[@"desc"])
+            {
+                [self.selectInterface addItemWithTitle:[NSString stringWithFormat:@"%@ (%@)", interfaceDetails[@"name"], interfaceDetails[@"description"]]];
+            }
+            else
+            {
+                [self.selectInterface addItemWithTitle:[NSString stringWithFormat:@"%@", interfaceDetails[@"name"]]];
+            }
+            
+            if ([interfaceDetails[@"name"] isEqualToString:currentCaptureInterface])
+            {
+                [self.selectInterface selectItemAtIndex:interfaceIndex];
+            }
+            
+            interfaceIndex++;
+        }
+        
+        [self.selectProbe setTag:self.captureWorker.probeType];
+        [self probeTypeChanged:self];
+        
+        self.btnDisplayOriginConnector.state = [[HostStore sharedStore] showOriginConnectorOnTrafficUpdate] ? NSOnState : NSOffState;
+    }
+}
+
 - (IBAction)displayModallyInWindow:(NSWindow *)window
 {
-    [self.selectProbe setTag:self.captureWorker.probeType];
-    [self probeTypeChanged:self];
-    
-    self.btnDisplayOriginConnector.state = [[HostStore sharedStore] showOriginConnectorOnTrafficUpdate] ? NSOnState : NSOffState;
+    /**
+     * Our outlets won't be connected until the window is loaded from the NIB file. The window isn't loaded from
+     * the NIB file until it is first requested for display by beginSheet:. We set up our controls on the first
+     * load of the window in windowDidLoad: and subsequent displays of the already loaded window here.
+     */
+    [self setupControls];
     
     [NSApp beginSheet:self.window
        modalForWindow:window
@@ -87,22 +129,42 @@
           contextInfo:nil];
     
     void (^stopBlock)() = ^() {
-        NSLog(@"Capture Thread was stopped, restarting");
-        self.progressMessage.stringValue = @"Reconfiguring capture thread ...";
+        NSLog(@"Capture thread was stopped, reconfiguring");
+
+        [self applyConfiguration];
         
-        [self.captureWorker setProbeMethod:(ProbeType)self.selectProbe.selectedTag completeTimedOutProbes:(self.btnCompleteTimedOutProbes.state == NSOnState) ? YES : NO];
-        [[HostStore sharedStore] setShowOriginConnectorOnTrafficUpdate:(self.btnDisplayOriginConnector.state == NSOnState) ? YES : NO];
-
-        self.progressMessage.stringValue = @"Restarting capture thread ...";
-
         [sender setEnabled:YES];
         [NSApp endSheet:self.progressPanel];
 
-        [self.captureWorker startCapture];
         [NSApp endSheet:self.window];
     };
         
-    [self.captureWorker stopCapture:stopBlock];
+    if ( ! [self.captureWorker stopCapture:stopBlock])
+    {
+        NSLog(@"Capture thread was not stopped, it was probably never running");
+        
+        [self applyConfiguration];
+        
+        [sender setEnabled:YES];
+        [NSApp endSheet:self.progressPanel];
+        
+        [NSApp endSheet:self.window];
+    }
+}
+
+- (void)applyConfiguration
+{
+    self.progressMessage.stringValue = @"Reconfiguring display options ...";
+    
+    [[HostStore sharedStore] setShowOriginConnectorOnTrafficUpdate:(self.btnDisplayOriginConnector.state == NSOnState) ? YES : NO];
+    
+    if ([self.captureDevices objectAtIndex:self.selectInterface.indexOfSelectedItem])
+    {
+        self.progressMessage.stringValue = @"Restarting capture thread ...";
+        
+        [self.captureWorker setProbeMethod:(ProbeType)self.selectProbe.selectedTag completeTimedOutProbes:(self.btnCompleteTimedOutProbes.state == NSOnState) ? YES : NO];
+        [self.captureWorker startCapture:[[self.captureDevices objectAtIndex:self.selectInterface.indexOfSelectedItem] objectForKey:@"name"]];
+    }
 }
 
 - (IBAction)cancelChanges:(id)sender
