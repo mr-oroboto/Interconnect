@@ -16,6 +16,7 @@
 #import "NSFont_OpenGL.h"
 #import "glm/vec3.hpp"
 #import "glm/gtc/matrix_transform.hpp"
+#import "CaptureWorker.h"
 
 #define kPiOn180 0.0174532925f
 #define kEnableVerticalSync NO
@@ -771,9 +772,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glLoadIdentity();
     glColor3f(1, 1, 1);
     glRasterPos3f(5, 15, 0);
-    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, control: %@, light: %@, colour: %@, groups: %@]",
+    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, capture: %@, control: %@, light: %@, colour: %@, groups: %@]",
                    self.lastNodeCount,
-                   self.fps, self.isWorldRotating ? @"world" : @"camera",
+                   self.fps,
+                   self.captureWorker.workerRunning ? self.captureWorker.captureInterface : @"stopped",
+                   self.isWorldRotating ? @"world" : @"camera",
                    self.isLightOn ? @"yes" : @"no",
                    self.colourationMode == kColourationByPreferredColour ? @"preferred" : @"orbital",
                    groupingStrategy]];

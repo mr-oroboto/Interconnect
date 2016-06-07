@@ -78,12 +78,12 @@
                                 </button>
                                 <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="zQn-Oz-omE">
                                     <rect key="frame" x="455" y="99" width="183" height="26"/>
-                                    <popUpButtonCell key="cell" type="push" title="Traceroute (Optimised)" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" borderStyle="borderAndBezel" tag="3" imageScaling="proportionallyDown" inset="2" selectedItem="Ig4-UL-zVX" id="hsF-6E-5Vj">
+                                    <popUpButtonCell key="cell" type="push" title="Traceroute (Optimised)" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" tag="3" imageScaling="proportionallyDown" inset="2" selectedItem="Ig4-UL-zVX" id="hsF-6E-5Vj">
                                         <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                         <font key="font" metaFont="menu"/>
                                         <menu key="menu" id="47G-b2-3D0">
                                             <items>
-                                                <menuItem title="Traceroute (Optimised)" tag="3" id="Ig4-UL-zVX"/>
+                                                <menuItem title="Traceroute (Optimised)" state="on" tag="3" id="Ig4-UL-zVX"/>
                                             </items>
                                         </menu>
                                     </popUpButtonCell>

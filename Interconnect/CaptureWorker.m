@@ -27,7 +27,6 @@
 
 @interface CaptureWorker ()
 
-@property (nonatomic) BOOL workerRunning;                   // set from worker, read from main
 @property (nonatomic, copy) void (^stopBlock)(void);        // used to signal capture thread exit
 @property (nonatomic, strong) NSLock* startStopLock;
 
@@ -175,11 +174,11 @@
     return stopRequested;
 }
 
-- (void)startCapture:(NSString*)captureInterface
+- (void)startCapture:(NSString*)captureInterface withFilter:(NSString*)filter
 {
     void (^captureBlock)() = ^() {
         [self.startStopLock lock];
-        self.workerRunning = YES;           // self.stopBlock could already have been set by now (race condition, if so we'll exit immediately below)
+        _workerRunning = YES;           // self.stopBlock could already have been set by now (race condition, if so we'll exit immediately below)
         [self.startStopLock unlock];
 
         void (^stopBlock)(void) = nil;
@@ -205,8 +204,9 @@
             }
             
             _captureInterface = [NSString stringWithFormat:@"%s", device];
+            _captureFilter = [filter copy];
 
-            // Get network *number* (currently unused) and mask
+            // Get network *number* (currently unused) and mask (required for filter)
             if (pcap_lookupnet(device, &_interfaceAddress, &_interfaceMask, errbuf) < 0)
             {
                 [NSException raise:@"pcap_lookupnet" format:@"pcap_lookupnet failed: %s", errbuf];
@@ -228,6 +228,21 @@
             }
             else
             {
+                if (filter.length)
+                {
+                    struct bpf_program filter;
+                    
+                    if (pcap_compile(capture_handle, &filter, [self.captureFilter cStringUsingEncoding:NSASCIIStringEncoding], 0, _interfaceMask) < 0)
+                    {
+                        [NSException raise:@"pcap_compile" format:@"pcap_compile failed: %s", pcap_geterr(capture_handle)];
+                    }
+                    
+                    if (pcap_setfilter(capture_handle, &filter) < 0)
+                    {
+                        [NSException raise:@"pcap_setfilter" format:@"pcap_setfilter failed: %s", pcap_geterr(capture_handle)];
+                    }
+                }
+                
                 [self initialiseProbeMethod];
                 
                 struct pcap_pkthdr header;
@@ -236,11 +251,6 @@
                 
                 if ([self logDataLinkHeaderType:linklayer_hdr_type])
                 {
-                    /*
-                     pcap_compile()
-                     pcap_setfilter()
-                     */
-                    
                     struct timeval timeStart, timeEnd;
                     
                     while ( ! stopBlock)
@@ -270,7 +280,7 @@
                 }
                 else
                 {
-                    NSLog(@"Unsupported data-link layer");
+                    [NSException raise:@"Unsupported data-link layer" format:@"Unsupported data-link layer"];
                 }
                 
                 pcap_close(capture_handle);
@@ -338,7 +348,7 @@
 - (void)signalCaptureThreadIsStopped:(void (^)(void))stopBlock
 {
     [self.startStopLock lock];
-    self.workerRunning = NO;
+    _workerRunning = NO;
     self.stopBlock = nil;               // subsequent starts should not immediately stop unless stopCapture was called
     [self.startStopLock unlock];
     

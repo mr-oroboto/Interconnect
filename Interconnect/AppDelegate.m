@@ -13,10 +13,13 @@
 #import "ICMPTimeExceededProbeThread.h"
 #import "HelpSheetController.h"
 #import "PreferencesSheetController.h"
+#import "OpenGLView.h"
 
 @interface AppDelegate ()
 
 @property (weak) IBOutlet NSWindow *window;
+@property (nonatomic, strong) IBOutlet OpenGLView* openGLView;
+
 @property (nonatomic, strong) ProbeThread* thread;
 @property (nonatomic, strong) HelpSheetController* helpSheet;
 @property (nonatomic, strong) PreferencesSheetController* preferencesSheet;
@@ -30,7 +33,9 @@
 {
     self.captureWorker = [[CaptureWorker alloc] init];
 //  [self createSampleData];
-    [self.captureWorker startCapture:@""];
+    [self.captureWorker startCapture:@"" withFilter:@""];
+    
+    self.openGLView.captureWorker = self.captureWorker;
 
     return;
 }

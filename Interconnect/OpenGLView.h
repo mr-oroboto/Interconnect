@@ -8,7 +8,11 @@
 
 #import <Cocoa/Cocoa.h>
 
+@class CaptureWorker;
+
 @interface OpenGLView : NSOpenGLView
+
+@property (nonatomic, strong) CaptureWorker* captureWorker;
 
 @end
 

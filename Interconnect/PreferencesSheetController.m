@@ -92,6 +92,8 @@
             interfaceIndex++;
         }
         
+        [self.textFilter setStringValue:self.captureWorker.captureFilter];
+        
         [self.selectProbe setTag:self.captureWorker.probeType];
         [self probeTypeChanged:self];
         
@@ -163,7 +165,7 @@
         self.progressMessage.stringValue = @"Restarting capture thread ...";
         
         [self.captureWorker setProbeMethod:(ProbeType)self.selectProbe.selectedTag completeTimedOutProbes:(self.btnCompleteTimedOutProbes.state == NSOnState) ? YES : NO];
-        [self.captureWorker startCapture:[[self.captureDevices objectAtIndex:self.selectInterface.indexOfSelectedItem] objectForKey:@"name"]];
+        [self.captureWorker startCapture:[[self.captureDevices objectAtIndex:self.selectInterface.indexOfSelectedItem] objectForKey:@"name"] withFilter:self.textFilter.stringValue];
     }
 }
 
