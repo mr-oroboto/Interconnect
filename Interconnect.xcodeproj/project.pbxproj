@@ -17,6 +17,7 @@
 		602A9FCD1CC1AC1A0051CFEF /* NodeStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCC1CC1AC1A0051CFEF /* NodeStore.m */; };
 		602A9FD01CC1AC250051CFEF /* Node.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FCF1CC1AC250051CFEF /* Node.m */; };
 		602A9FD31CC1AC360051CFEF /* Host.m in Sources */ = {isa = PBXBuildFile; fileRef = 602A9FD21CC1AC360051CFEF /* Host.m */; };
+		60393FB41D2E091B00B909B3 /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = 60393FB31D2E091B00B909B3 /* README.md */; };
 		6039D12D1D0164AF00EB55A3 /* PreferencesSheet.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6039D12C1D0164AF00EB55A3 /* PreferencesSheet.xib */; };
 		603EE8191D0260A8009B416B /* PreferencesSheetController.m in Sources */ = {isa = PBXBuildFile; fileRef = 603EE8181D0260A8009B416B /* PreferencesSheetController.m */; };
 		6040C9721CD2C22400484468 /* ICMPEchoProbe.m in Sources */ = {isa = PBXBuildFile; fileRef = 6040C9711CD2C22400484468 /* ICMPEchoProbe.m */; };
@@ -164,6 +165,7 @@
 		602A9FCF1CC1AC250051CFEF /* Node.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Node.m; sourceTree = "<group>"; };
 		602A9FD11CC1AC360051CFEF /* Host.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Host.h; sourceTree = "<group>"; };
 		602A9FD21CC1AC360051CFEF /* Host.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Host.m; sourceTree = "<group>"; };
+		60393FB31D2E091B00B909B3 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		6039D12C1D0164AF00EB55A3 /* PreferencesSheet.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PreferencesSheet.xib; sourceTree = "<group>"; };
 		603EE8171D0260A8009B416B /* PreferencesSheetController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PreferencesSheetController.h; sourceTree = "<group>"; };
 		603EE8181D0260A8009B416B /* PreferencesSheetController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PreferencesSheetController.m; sourceTree = "<group>"; };
@@ -494,6 +496,7 @@
 				60DEC3871CF03C0100617C4F /* HelpSheet.xib */,
 				6039D12C1D0164AF00EB55A3 /* PreferencesSheet.xib */,
 				6003335F1CBA0673007BA868 /* Info.plist */,
+				60393FB31D2E091B00B909B3 /* README.md */,
 				600333571CBA0673007BA868 /* Supporting Files */,
 			);
 			path = Interconnect;
@@ -1047,6 +1050,7 @@
 				603EE8191D0260A8009B416B /* PreferencesSheetController.m in Sources */,
 				60D3B6301CE7EB6000447CD6 /* ProbeThread.m in Sources */,
 				602A9FD01CC1AC250051CFEF /* Node.m in Sources */,
+				60393FB41D2E091B00B909B3 /* README.md in Sources */,
 				606FFB181CC6DE1800A1CF70 /* HostStore.m in Sources */,
 				600333591CBA0673007BA868 /* main.m in Sources */,
 				602A9FCD1CC1AC1A0051CFEF /* NodeStore.m in Sources */,

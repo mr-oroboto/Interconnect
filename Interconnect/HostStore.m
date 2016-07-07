@@ -84,7 +84,7 @@ typedef enum
         /**
          * How will hosts be grouped?
          */
-        _groupingStrategy = kHostStoreGroupBasedOnNetworkClass;
+        _groupingStrategy = kHostStoreGroupBasedOnHopCount;
         
         _showOriginConnectorOnTrafficUpdate = kShowOriginConnectorOnTrafficUpdate;
     }

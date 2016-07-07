@@ -679,26 +679,19 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     if (node && node.selected)
     {
         Host* host = (Host*)node;
-        NSString *asDetails = @"", *firstPort = @"";
-
-        if (host.autonomousSystem.length)
-        {
-            asDetails = [NSString stringWithFormat:@" <AS%@ %@>", host.autonomousSystem, host.autonomousSystemDesc];
-        }
-        
-        if (host.firstPortSeen)
-        {
-            firstPort = [NSString stringWithFormat:@":%lu", host.firstPortSeen];
-        }
 
         glColor3f(1, 1, 0);
         glRasterPos3f(x+s, y+s, z);
-        [self glPrint:[NSString stringWithFormat:@"%@%@%@ [in: %lu] [out: %lu]", host.hostname.length ? host.hostname : host.ipAddress, firstPort, asDetails, host.bytesReceived, host.bytesSent]];
+        [self glPrint:[NSString stringWithFormat:@"%@", host.hostname.length ? host.hostname : host.ipAddress]];
         
         if (self.previousSelection != nil)
         {
             // This is simply debugging used to detect multiple selection (ie. ray passed through > 1 node)
             NSLog(@"Selected %@ (%.2f, %.2f, %.2f) but %@ already selected", node.identifier, x, y, z, self.previousSelection.identifier);
+        }
+        else
+        {
+            [self drawSelectedHostHUD:host];
         }
         
         self.previousSelection = node;
@@ -737,6 +730,32 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     glEndList();
 }
 
+- (void)drawOrthoString:(NSString*)string x:(NSUInteger)x y:(NSUInteger)y colour:(NSColor*)colour
+{
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // left, right, bottom, top, z
+    glOrtho(0, viewport[2], viewport[3], 0, -1.0, 1.0);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glColor3f([colour redComponent], [colour greenComponent], [colour blueComponent]);
+    glRasterPos3f(x, y, 0);
+    [self glPrint:string];
+    glPopMatrix();
+    
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    
+    glMatrixMode(GL_MODELVIEW);
+}
+
 - (void)drawHUD
 {
     NSString *groupingStrategy = @"";
@@ -757,35 +776,54 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             break;
     }
     
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    
-    // left, right, bottom, top, z
-    glOrtho(0, viewport[2], viewport[3], 0, -1.0, 1.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-    glColor3f(1, 1, 1);
     glRasterPos3f(5, 15, 0);
-    [self glPrint:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, capture: %@, control: %@, light: %@, colour: %@, groups: %@]",
-                   self.lastNodeCount,
-                   self.fps,
-                   self.captureWorker.workerRunning ? self.captureWorker.captureInterface : @"stopped",
-                   self.isWorldRotating ? @"world" : @"camera",
-                   self.isLightOn ? @"yes" : @"no",
-                   self.colourationMode == kColourationByPreferredColour ? @"preferred" : @"orbital",
-                   groupingStrategy]];
-    glPopMatrix();
+    [self drawOrthoString:[NSString stringWithFormat:@"%lu hosts [%.2f FPS, capture: %@, control: %@, light: %@, colour: %@, groups: %@]",
+                                                self.lastNodeCount,
+                                                self.fps,
+                                                self.captureWorker.workerRunning ? self.captureWorker.captureInterface : @"stopped",
+                                                self.isWorldRotating ? @"world" : @"camera",
+                                                self.isLightOn ? @"yes" : @"no",
+                                                self.colourationMode == kColourationByPreferredColour ? @"preferred" : @"orbital",
+                                                groupingStrategy]
+                        x:5
+                        y:15
+                   colour:[[NSColor whiteColor] colorUsingColorSpace:[NSColorSpace genericRGBColorSpace]]];
+}
 
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-
-    glMatrixMode(GL_MODELVIEW);
+- (void)drawSelectedHostHUD:(Host*)host
+{
+    NSString *identifier, *traffic, *distance;
+    
+    // Build identifier line
+    if (host.hostname.length)
+    {
+        identifier = [NSString stringWithFormat:@"%@ (%@)", host.hostname, host.ipAddress];
+    }
+    else
+    {
+        identifier = [NSString stringWithFormat:@"%@", host.ipAddress];
+    }
+    
+    if (host.autonomousSystem.length)
+    {
+        identifier = [identifier stringByAppendingString:[NSString stringWithFormat:@" <AS%@ %@>", host.autonomousSystem, host.autonomousSystemDesc]];
+    }
+    
+    traffic = [NSString stringWithFormat:@"Received: %8lu Sent: %8lu", host.bytesReceived, host.bytesSent];
+    
+    if (host.firstPortSeen)
+    {
+        traffic = [traffic stringByAppendingString:[NSString stringWithFormat:@" (first port seen: %lu)", host.firstPortSeen]];
+    }
+    
+    distance = [NSString stringWithFormat:@"Hops: %3lu RTT: %.1fms", host.hopCount, host.rtt];
+    
+    NSColor *yellow = [[NSColor yellowColor] colorUsingColorSpace:[NSColorSpace genericRGBColorSpace]];
+    NSRect rect = [self bounds];        // view's size and position in its own co-ordinate system
+    
+    [self drawOrthoString:identifier x:5 y:rect.size.height - 30 colour:yellow];
+    [self drawOrthoString:traffic x:5 y:rect.size.height - 20 colour:yellow];
+    [self drawOrthoString:distance x:5 y:rect.size.height - 10 colour:yellow];
 }
 
 @end
