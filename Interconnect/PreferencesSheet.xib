@@ -27,7 +27,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES" utility="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="-1724" y="67" width="691" height="427"/>
-            <rect key="screenRect" x="-1920" y="-65" width="1920" height="1177"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1920" height="1177"/>
             <view key="contentView" id="g9u-Lb-2L1">
                 <rect key="frame" x="0.0" y="0.0" width="691" height="427"/>
                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -64,7 +64,7 @@
                                 </textField>
                                 <button fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="gUI-oQ-cf8">
                                     <rect key="frame" x="18" y="46" width="338" height="18"/>
-                                    <buttonCell key="cell" type="check" title="Only display nodes communicating on unusual ports" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="n1T-zs-kO7">
+                                    <buttonCell key="cell" type="check" title="Only display nodes communicating on unusual ports" bezelStyle="regularSquare" imagePosition="left" enabled="NO" inset="2" id="n1T-zs-kO7">
                                         <behavior key="behavior" pushIn="YES" changeContents="YES" lightByContents="YES"/>
                                         <font key="font" metaFont="system"/>
                                     </buttonCell>

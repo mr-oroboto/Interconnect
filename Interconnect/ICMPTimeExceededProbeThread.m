@@ -22,7 +22,6 @@
 #import <sys/time.h>
 
 #define kMaxAttemptsToFindUnusedPort            10
-#define kBaseUDPPort                            30000
 
 #define kMaxProbeTTL                            30
 #define kMaxProbeFlightTimeMs                   10000
@@ -452,7 +451,7 @@ struct payload
     
     do
     {
-        dstPort = kBaseUDPPort + (arc4random() % (65535 - kBaseUDPPort));
+        dstPort = kBaseTracerouteUDPPort + (arc4random() % (65535 - kBaseTracerouteUDPPort));
         NSNumber *portKey = [NSNumber numberWithInt:dstPort];
         
         // Have we already sent a probe to this port? If so, we can only reuse it if the probe is complete.

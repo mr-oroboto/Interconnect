@@ -95,6 +95,7 @@
         [self.textFilter setStringValue:self.captureWorker.captureFilter];
         
         [self.selectProbe setTag:self.captureWorker.probeType];
+        self.btnDisplayIntermediateRouters.state = self.captureWorker.ignoreProbeIntermediateTraffic ? NSOffState : NSOnState;
         [self probeTypeChanged:self];
         
         self.btnDisplayOriginConnector.state = [[HostStore sharedStore] showOriginConnectorOnTrafficUpdate] ? NSOnState : NSOffState;
@@ -164,7 +165,9 @@
     {
         self.progressMessage.stringValue = @"Restarting capture thread ...";
         
-        [self.captureWorker setProbeMethod:(ProbeType)self.selectProbe.selectedTag completeTimedOutProbes:(self.btnCompleteTimedOutProbes.state == NSOnState) ? YES : NO];
+        [self.captureWorker setProbeMethod:(ProbeType)self.selectProbe.selectedTag
+                    completeTimedOutProbes:(self.btnCompleteTimedOutProbes.state == NSOnState) ? YES : NO
+                 ignoreIntermediateTraffic:(self.btnDisplayIntermediateRouters.state == NSOnState) ? NO : YES];
         [self.captureWorker startCapture:[[self.captureDevices objectAtIndex:self.selectInterface.indexOfSelectedItem] objectForKey:@"name"] withFilter:self.textFilter.stringValue];
     }
 }

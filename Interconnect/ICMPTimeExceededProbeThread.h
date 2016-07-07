@@ -8,6 +8,8 @@
 
 #import "ProbeThread.h"
 
+#define kBaseTracerouteUDPPort 30000
+
 @interface ICMPTimeExceededProbeThread : ProbeThread
 
 @end

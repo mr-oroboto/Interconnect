@@ -10,9 +10,12 @@
 #import "HostStore.h"
 #import "Host.h"
 #import "PacketHeaders.h"
+#import <sys/types.h>
 #import <pcap/pcap.h>
 #import <arpa/inet.h>
 #import <net/if.h>
+#import <netinet/ip.h>
+#import <netinet/ip_icmp.h>
 #import <sys/ioctl.h>
 #import "Probe.h"
 #import "ICMPEchoProbe.h"
@@ -70,7 +73,7 @@
         _probeQueue = nil;
         _probeThread = nil;
 
-        [self setProbeMethod:kProbeTypeThreadTraceroute completeTimedOutProbes:YES];
+        [self setProbeMethod:kProbeTypeThreadTraceroute completeTimedOutProbes:YES ignoreIntermediateTraffic:YES];
         
         // Create a serial dispatch queue, we'll only ever queue up one task on it.
         _captureQueue = dispatch_queue_create("net.oroboto.Interconnect.CaptureWorker", NULL);
@@ -87,7 +90,7 @@
 {
 }
 
-- (BOOL)setProbeMethod:(ProbeType)probeType completeTimedOutProbes:(BOOL)completeTimedOutProbes
+- (BOOL)setProbeMethod:(ProbeType)probeType completeTimedOutProbes:(BOOL)completeTimedOutProbes ignoreIntermediateTraffic:(BOOL)ignoreIntermediateTraffic
 {
     if (self.workerRunning)
     {
@@ -97,6 +100,7 @@
 
     _probeType = probeType;
     _completeTimedOutProbes = completeTimedOutProbes;
+    _ignoreProbeIntermediateTraffic = ignoreIntermediateTraffic;
 
     return YES;
 }
@@ -412,7 +416,8 @@
         NSLog(@"Invalid IPv4 header length (%d bytes)", ip_hdr_len);
         return;
     }
-    
+
+    BOOL trafficIsGeneratedByProbe = NO;
     NSString* srcHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_saddr) encoding:NSASCIIStringEncoding];
     NSString* dstHost = [NSString stringWithCString:inet_ntoa(ip_hdr->ip_daddr) encoding:NSASCIIStringEncoding];
     NSUInteger srcPort = 0, dstPort = 0;
@@ -443,32 +448,69 @@
     }
     else if (ip_hdr->ip_proto == IPPROTO_UDP)
     {
+        struct hdr_udp* udp_hdr = (struct hdr_udp*)(packet + ETHER_HEADER_LEN + ip_hdr_len);
+        if (ntohs(udp_hdr->udp_len) < 4)
+        {
+            NSLog(@"%@ -> %@: Invalid UDP header length (%d bytes)", srcHost, dstHost, ntohs(udp_hdr->udp_len));
+            return;
+        }
+        
+        srcPort = ntohs(udp_hdr->udp_sport);
+        dstPort = ntohs(udp_hdr->udp_dport);
+
         if (kLogTraffic)
         {
-          NSLog(@"UDP  %@ -> %@", srcHost, dstHost);
+            NSLog(@"UDP  %@:%lu -> %@:%lu", srcHost, srcPort, dstHost, dstPort);
+        }
+        
+        /**
+         * If the source port is a high port and we are the source and running a traceroute probe then this 
+         * traffic is most likely probe related.
+         */
+        if ((self.probeType == kProbeTypeTraceroute || self.probeType == kProbeTypeThreadTraceroute) &&
+            ip_hdr->ip_saddr.s_addr == _interfaceAddress &&
+            dstPort >= kBaseTracerouteUDPPort)
+        {
+            trafficIsGeneratedByProbe = YES;
         }
     }
     else if (ip_hdr->ip_proto == IPPROTO_ICMP)
     {
+        struct icmp* icmp_hdr = (struct icmp*)(packet + ETHER_HEADER_LEN + ip_hdr_len);
+        
         if (kLogTraffic)
         {
-            NSLog(@"ICMP %@ -> %@", srcHost, dstHost);            
+            NSLog(@"ICMP %@ -> %@ (type: %d)", srcHost, dstHost, icmp_hdr->icmp_type);
+        }
+        
+        /**
+         * @todo: better check for ICMP type, if time exceeded or port unreachable with us as destination
+         * and we are running a traceroute probe then this traffic is probe related.
+         */
+        if ((self.probeType == kProbeTypeTraceroute || self.probeType == kProbeTypeThreadTraceroute)
+            && ip_hdr->ip_daddr.s_addr == _interfaceAddress
+            && (icmp_hdr->icmp_type == ICMP_TIMXCEED || icmp_hdr->icmp_type == ICMP_UNREACH_PORT))
+        {
+            trafficIsGeneratedByProbe = YES;
         }
     }
     else
     {
         NSLog(@"**** %@ -> %@: Unsupported IP protocol [%d]", srcHost, dstHost, ip_hdr->ip_proto);
     }
-    
-    if (ip_hdr->ip_saddr.s_addr == _interfaceAddress)
+
+    if ( ! self.ignoreProbeIntermediateTraffic || ! trafficIsGeneratedByProbe)
     {
-        // traffic from us to them
-        [self updateHost:dstHost addBytesToUs:0 addBytesFromUs:transferBytes port:dstPort];
-    }
-    else if (ip_hdr->ip_daddr.s_addr == _interfaceAddress)
-    {
-        // traffic from them to us
-        [self updateHost:srcHost addBytesToUs:transferBytes addBytesFromUs:0 port:srcPort];
+        if (ip_hdr->ip_saddr.s_addr == _interfaceAddress)
+        {
+            // traffic from us
+            [self updateHost:dstHost addBytesToUs:0 addBytesFromUs:transferBytes port:dstPort];
+        }
+        else if (ip_hdr->ip_daddr.s_addr == _interfaceAddress)
+        {
+            // traffic to us
+            [self updateHost:srcHost addBytesToUs:transferBytes addBytesFromUs:0 port:srcPort];
+        }
     }
 }
 
