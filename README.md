@@ -2,7 +2,11 @@
 
 Interconnect is a 3D visualisation tool for Mac OSX that monitors network traffic and displays the relationship between your machine and the hosts it is communicating with. Whilst primarily a novelty this can be useful for easily seeing communication with new, unexpected hosts (especially on unexpected port ranges) or simply understanding the total endpoints involved in serving a specific service such as a web page.
 
-You can see a demo of Interconnect in action [here](http://www.vimeo.com).
+
+Hosts are grouped according to common metrics such as distance from localhost (in hop count or RTT), AS number or network. The size of each host is proportional to the total amount of traffic sent and received to/from it.
+
+
+You can see a demo of Interconnect in action [here](https://vimeo.com/173716721).
 
 ## Prerequisites
 
@@ -14,13 +18,16 @@ You will need to install libpcap (which you can get courtesy of installing a too
 
 As expected, Interconnect is able to capture on a variety of locally connected interfaces and to filter out unwanted traffic using standard BPF capture rule syntax (the same syntax used by tcmpdump and described by the **pcap-filter** man page).
 
+
 One caveat is that the capture interface must have an IP address configured.
 
 ### Configurable Host Groupings
 
 Interconnect collects information on the hosts with which your machine communicates and attempts to capture data such as hostname, autonomous system (AS) number, hop count and round trip time (hop count information is only available if using one of the built-in traceroute style probing techniques).
 
+
 In order to provide some context to communicating hosts they are grouped together using common metrics and clustered around a central point (the localhost). It is possible to group hosts based on:
+
 
 - hop count from localhost (if using a traceroute probe)
 - round-trip time to host
